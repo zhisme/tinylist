@@ -278,3 +278,5 @@ This is a **self-hosted, open-source** application:
 - Integration tests for API endpoints, SMTP mock testing
 - Manual testing for real SMTP sending and K8s deployment
 - Load testing target: 1000+ subscribers, 100+ emails/minute
+
+BEFORE ANYTHING ELSE: run 'bd onboard' and follow the instructions
