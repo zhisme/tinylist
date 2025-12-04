@@ -19,7 +19,3 @@ sending:
   rate_limit: 10        # Emails per second
   max_retries: 3
   batch_size: 100
-
-logging:
-  level: "info"         # debug, info, warn, error
-  format: "json"        # json or text

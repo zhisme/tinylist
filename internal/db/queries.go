@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/zh/tinylist/internal/models"
+	"github.com/zhisme/tinylist/internal/models"
 )
 
 // Subscriber queries

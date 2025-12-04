@@ -1,4 +1,4 @@
-module github.com/zh/tinylist
+module github.com/zhisme/tinylist
 
 go 1.24.0
 
