@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs. See AGENTS.md for workflow details.
+
 ## Project Overview
 
 TinyList is a lightweight, API-first email list manager with SQLite backend designed for resource-constrained environments. It runs in <100MB RAM and provides essential email list functionality with both a Go backend and a Preact-based admin frontend.
@@ -278,5 +280,3 @@ This is a **self-hosted, open-source** application:
 - Integration tests for API endpoints, SMTP mock testing
 - Manual testing for real SMTP sending and K8s deployment
 - Load testing target: 1000+ subscribers, 100+ emails/minute
-
-BEFORE ANYTHING ELSE: run 'bd onboard' and follow the instructions
