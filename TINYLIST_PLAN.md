@@ -250,10 +250,10 @@ The API is organized into two distinct namespaces:
                 │                │                │
         ┌───────▼────────┐  ┌───▼────────┐  ┌───▼────────┐
         │  Go Backend    │  │ Go Backend │  │  Frontend  │
-        │  (Public API)  │  │(Private API)│  │  (Preact)  │
+        │  (Public API)  │  │ Private API│  │  (Preact)  │
         └────────────────┘  └─────┬──────┘  └─────┬──────┘
-                                  │                │
-                                  └────────────────┘
+                                  │               │
+                                  └───────────────┘
                                    API calls to /api/private/*
 ```
 
