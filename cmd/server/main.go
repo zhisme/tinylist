@@ -15,6 +15,8 @@ import (
 	"github.com/zhisme/tinylist/internal/config"
 	"github.com/zhisme/tinylist/internal/db"
 	"github.com/zhisme/tinylist/internal/handlers/private"
+	"github.com/zhisme/tinylist/internal/handlers/public"
+	"github.com/zhisme/tinylist/internal/mailer"
 )
 
 func main() {
@@ -36,6 +38,9 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
+	// Initialize mailer
+	mail := mailer.New(cfg.SMTP)
+
 	// Initialize router
 	r := chi.NewRouter()
 
@@ -53,6 +58,17 @@ func main() {
 		fmt.Fprintf(w, `{"status":"healthy"}`)
 	})
 
+	// Public API routes
+	subscribeHandler := public.NewSubscribeHandler(database, mail, cfg.Server.PublicURL)
+	verifyHandler := public.NewVerifyHandler(database)
+	unsubscribeHandler := public.NewUnsubscribeHandler(database)
+
+	r.Route("/api", func(r chi.Router) {
+		r.Post("/subscribe", subscribeHandler.Subscribe)
+		r.Get("/verify/{token}", verifyHandler.Verify)
+		r.Get("/unsubscribe/{token}", unsubscribeHandler.Unsubscribe)
+	})
+
 	// Private API routes
 	subscriberHandler := private.NewSubscriberHandler(database)
 	r.Route("/api/private", func(r chi.Router) {
@@ -61,6 +77,7 @@ func main() {
 
 	// Server configuration
 	port := cfg.Server.Port
+  // TODO: maybe move to config yaml
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		fmt.Sscanf(envPort, "%d", &port)
 	}
