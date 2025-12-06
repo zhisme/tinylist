@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,9 +12,30 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/zhisme/tinylist/internal/config"
+	"github.com/zhisme/tinylist/internal/db"
+	"github.com/zhisme/tinylist/internal/handlers/private"
 )
 
 func main() {
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Initialize database
+	database, err := db.New(cfg.Database.Path)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer database.Close()
+
+	// Run migrations
+	if err := database.Migrate(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
 	// Initialize router
 	r := chi.NewRouter()
 
@@ -31,14 +53,20 @@ func main() {
 		fmt.Fprintf(w, `{"status":"healthy"}`)
 	})
 
+	// Private API routes
+	subscriberHandler := private.NewSubscriberHandler(database)
+	r.Route("/api/private", func(r chi.Router) {
+		r.Mount("/subscribers", subscriberHandler.Routes())
+	})
+
 	// Server configuration
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	port := cfg.Server.Port
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		fmt.Sscanf(envPort, "%d", &port)
 	}
 
 	server := &http.Server{
-		Addr:         ":" + port,
+		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, port),
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -47,7 +75,7 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Starting TinyList server on port %s", port)
+		log.Printf("Starting TinyList server on %s:%d", cfg.Server.Host, port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
 		}
@@ -59,4 +87,13 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server stopped")
 }

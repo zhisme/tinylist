@@ -3,9 +3,25 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/zhisme/tinylist/internal/models"
 )
+
+// parseTime parses a SQLite datetime string to time.Time
+func parseTime(s string) time.Time {
+	t, _ := time.Parse("2006-01-02 15:04:05", s)
+	return t
+}
+
+// parseTimePtr parses a nullable SQLite datetime string to *time.Time
+func parseTimePtr(s sql.NullString) *time.Time {
+	if !s.Valid {
+		return nil
+	}
+	t := parseTime(s.String)
+	return &t
+}
 
 // Subscriber queries
 
@@ -14,12 +30,15 @@ func (db *DB) CreateSubscriber(sub *models.Subscriber) error {
 	query := `
 		INSERT INTO subscribers (uuid, email, name, status, verify_token, unsubscribe_token, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-		RETURNING id
+		RETURNING id, created_at, updated_at
 	`
-	err := db.QueryRow(query, sub.UUID, sub.Email, sub.Name, sub.Status, sub.VerifyToken, sub.UnsubscribeToken).Scan(&sub.ID)
+	var createdAt, updatedAt string
+	err := db.QueryRow(query, sub.UUID, sub.Email, sub.Name, sub.Status, sub.VerifyToken, sub.UnsubscribeToken).Scan(&sub.ID, &createdAt, &updatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create subscriber: %w", err)
 	}
+	sub.CreatedAt = parseTime(createdAt)
+	sub.UpdatedAt = parseTime(updatedAt)
 	return nil
 }
 
@@ -32,14 +51,19 @@ func (db *DB) GetSubscriberByID(id int) (*models.Subscriber, error) {
 		WHERE id = ?
 	`
 	var sub models.Subscriber
+	var createdAt, updatedAt string
+	var verifiedAt sql.NullString
 	err := db.QueryRow(query, id).Scan(
 		&sub.ID, &sub.UUID, &sub.Email, &sub.Name, &sub.Status,
 		&sub.VerifyToken, &sub.UnsubscribeToken,
-		&sub.CreatedAt, &sub.VerifiedAt, &sub.UpdatedAt,
+		&createdAt, &verifiedAt, &updatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscriber: %w", err)
 	}
+	sub.CreatedAt = parseTime(createdAt)
+	sub.UpdatedAt = parseTime(updatedAt)
+	sub.VerifiedAt = parseTimePtr(verifiedAt)
 	return &sub, nil
 }
 
@@ -52,14 +76,19 @@ func (db *DB) GetSubscriberByUUID(uuid string) (*models.Subscriber, error) {
 		WHERE uuid = ?
 	`
 	var sub models.Subscriber
+	var createdAt, updatedAt string
+	var verifiedAt sql.NullString
 	err := db.QueryRow(query, uuid).Scan(
 		&sub.ID, &sub.UUID, &sub.Email, &sub.Name, &sub.Status,
 		&sub.VerifyToken, &sub.UnsubscribeToken,
-		&sub.CreatedAt, &sub.VerifiedAt, &sub.UpdatedAt,
+		&createdAt, &verifiedAt, &updatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscriber: %w", err)
 	}
+	sub.CreatedAt = parseTime(createdAt)
+	sub.UpdatedAt = parseTime(updatedAt)
+	sub.VerifiedAt = parseTimePtr(verifiedAt)
 	return &sub, nil
 }
 
@@ -72,14 +101,19 @@ func (db *DB) GetSubscriberByEmail(email string) (*models.Subscriber, error) {
 		WHERE email = ? COLLATE NOCASE
 	`
 	var sub models.Subscriber
+	var createdAt, updatedAt string
+	var verifiedAt sql.NullString
 	err := db.QueryRow(query, email).Scan(
 		&sub.ID, &sub.UUID, &sub.Email, &sub.Name, &sub.Status,
 		&sub.VerifyToken, &sub.UnsubscribeToken,
-		&sub.CreatedAt, &sub.VerifiedAt, &sub.UpdatedAt,
+		&createdAt, &verifiedAt, &updatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscriber: %w", err)
 	}
+	sub.CreatedAt = parseTime(createdAt)
+	sub.UpdatedAt = parseTime(updatedAt)
+	sub.VerifiedAt = parseTimePtr(verifiedAt)
 	return &sub, nil
 }
 
@@ -92,14 +126,19 @@ func (db *DB) GetSubscriberByVerifyToken(token string) (*models.Subscriber, erro
 		WHERE verify_token = ?
 	`
 	var sub models.Subscriber
+	var createdAt, updatedAt string
+	var verifiedAt sql.NullString
 	err := db.QueryRow(query, token).Scan(
 		&sub.ID, &sub.UUID, &sub.Email, &sub.Name, &sub.Status,
 		&sub.VerifyToken, &sub.UnsubscribeToken,
-		&sub.CreatedAt, &sub.VerifiedAt, &sub.UpdatedAt,
+		&createdAt, &verifiedAt, &updatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscriber: %w", err)
 	}
+	sub.CreatedAt = parseTime(createdAt)
+	sub.UpdatedAt = parseTime(updatedAt)
+	sub.VerifiedAt = parseTimePtr(verifiedAt)
 	return &sub, nil
 }
 
@@ -112,14 +151,19 @@ func (db *DB) GetSubscriberByUnsubscribeToken(token string) (*models.Subscriber,
 		WHERE unsubscribe_token = ?
 	`
 	var sub models.Subscriber
+	var createdAt, updatedAt string
+	var verifiedAt sql.NullString
 	err := db.QueryRow(query, token).Scan(
 		&sub.ID, &sub.UUID, &sub.Email, &sub.Name, &sub.Status,
 		&sub.VerifyToken, &sub.UnsubscribeToken,
-		&sub.CreatedAt, &sub.VerifiedAt, &sub.UpdatedAt,
+		&createdAt, &verifiedAt, &updatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscriber: %w", err)
 	}
+	sub.CreatedAt = parseTime(createdAt)
+	sub.UpdatedAt = parseTime(updatedAt)
+	sub.VerifiedAt = parseTimePtr(verifiedAt)
 	return &sub, nil
 }
 
@@ -161,13 +205,18 @@ func (db *DB) ListSubscribers(status string, page, perPage int) ([]*models.Subsc
 	var subscribers []*models.Subscriber
 	for rows.Next() {
 		var sub models.Subscriber
+		var createdAt, updatedAt string
+		var verifiedAt sql.NullString
 		if err := rows.Scan(
 			&sub.ID, &sub.UUID, &sub.Email, &sub.Name, &sub.Status,
 			&sub.VerifyToken, &sub.UnsubscribeToken,
-			&sub.CreatedAt, &sub.VerifiedAt, &sub.UpdatedAt,
+			&createdAt, &verifiedAt, &updatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan subscriber: %w", err)
 		}
+		sub.CreatedAt = parseTime(createdAt)
+		sub.UpdatedAt = parseTime(updatedAt)
+		sub.VerifiedAt = parseTimePtr(verifiedAt)
 		subscribers = append(subscribers, &sub)
 	}
 
@@ -240,13 +289,18 @@ func (db *DB) GetVerifiedSubscribers() ([]*models.Subscriber, error) {
 	var subscribers []*models.Subscriber
 	for rows.Next() {
 		var sub models.Subscriber
+		var createdAt, updatedAt string
+		var verifiedAt sql.NullString
 		if err := rows.Scan(
 			&sub.ID, &sub.UUID, &sub.Email, &sub.Name, &sub.Status,
 			&sub.VerifyToken, &sub.UnsubscribeToken,
-			&sub.CreatedAt, &sub.VerifiedAt, &sub.UpdatedAt,
+			&createdAt, &verifiedAt, &updatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan subscriber: %w", err)
 		}
+		sub.CreatedAt = parseTime(createdAt)
+		sub.UpdatedAt = parseTime(updatedAt)
+		sub.VerifiedAt = parseTimePtr(verifiedAt)
 		subscribers = append(subscribers, &sub)
 	}
 
@@ -283,14 +337,19 @@ func (db *DB) GetCampaignByID(id int) (*models.Campaign, error) {
 		WHERE id = ?
 	`
 	var c models.Campaign
+	var createdAt string
+	var startedAt, completedAt sql.NullString
 	err := db.QueryRow(query, id).Scan(
 		&c.ID, &c.UUID, &c.Subject, &c.BodyText, &c.BodyHTML, &c.Status,
 		&c.TotalCount, &c.SentCount, &c.FailedCount,
-		&c.CreatedAt, &c.StartedAt, &c.CompletedAt,
+		&createdAt, &startedAt, &completedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get campaign: %w", err)
 	}
+	c.CreatedAt = parseTime(createdAt)
+	c.StartedAt = parseTimePtr(startedAt)
+	c.CompletedAt = parseTimePtr(completedAt)
 	return &c, nil
 }
 
@@ -304,14 +363,19 @@ func (db *DB) GetCampaignByUUID(uuid string) (*models.Campaign, error) {
 		WHERE uuid = ?
 	`
 	var c models.Campaign
+	var createdAt string
+	var startedAt, completedAt sql.NullString
 	err := db.QueryRow(query, uuid).Scan(
 		&c.ID, &c.UUID, &c.Subject, &c.BodyText, &c.BodyHTML, &c.Status,
 		&c.TotalCount, &c.SentCount, &c.FailedCount,
-		&c.CreatedAt, &c.StartedAt, &c.CompletedAt,
+		&createdAt, &startedAt, &completedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get campaign: %w", err)
 	}
+	c.CreatedAt = parseTime(createdAt)
+	c.StartedAt = parseTimePtr(startedAt)
+	c.CompletedAt = parseTimePtr(completedAt)
 	return &c, nil
 }
 
@@ -333,13 +397,18 @@ func (db *DB) ListCampaigns() ([]*models.Campaign, error) {
 	var campaigns []*models.Campaign
 	for rows.Next() {
 		var c models.Campaign
+		var createdAt string
+		var startedAt, completedAt sql.NullString
 		if err := rows.Scan(
 			&c.ID, &c.UUID, &c.Subject, &c.BodyText, &c.BodyHTML, &c.Status,
 			&c.TotalCount, &c.SentCount, &c.FailedCount,
-			&c.CreatedAt, &c.StartedAt, &c.CompletedAt,
+			&createdAt, &startedAt, &completedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
+		c.CreatedAt = parseTime(createdAt)
+		c.StartedAt = parseTimePtr(startedAt)
+		c.CompletedAt = parseTimePtr(completedAt)
 		campaigns = append(campaigns, &c)
 	}
 
@@ -452,9 +521,11 @@ func (db *DB) GetCampaignLogs(campaignID int) ([]*models.CampaignLog, error) {
 	var logs []*models.CampaignLog
 	for rows.Next() {
 		var log models.CampaignLog
-		if err := rows.Scan(&log.ID, &log.CampaignID, &log.SubscriberID, &log.Status, &log.Error, &log.SentAt); err != nil {
+		var sentAt string
+		if err := rows.Scan(&log.ID, &log.CampaignID, &log.SubscriberID, &log.Status, &log.Error, &sentAt); err != nil {
 			return nil, fmt.Errorf("failed to scan campaign log: %w", err)
 		}
+		log.SentAt = parseTime(sentAt)
 		logs = append(logs, &log)
 	}
 

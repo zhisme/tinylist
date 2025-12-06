@@ -1,0 +1,21 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  public_url: "https://newsletter.example.com"  # For verification links
+
+database:
+  path: "./data/tinylist.db"
+
+smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  username: "your-email@gmail.com"
+  password: "your-app-password"
+  from_email: "newsletter@example.com"
+  from_name: "Newsletter"
+  tls: true
+
+sending:
+  rate_limit: 10        # Emails per second
+  max_retries: 3
+  batch_size: 100

@@ -12,13 +12,25 @@ var schemaSQL string
 
 // Migrate runs database migrations
 func (db *DB) Migrate() error {
+	// Remove SQL comments first
+	lines := strings.Split(schemaSQL, "\n")
+	var cleanLines []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "--") {
+			continue
+		}
+		cleanLines = append(cleanLines, line)
+	}
+	cleanSQL := strings.Join(cleanLines, "\n")
+
 	// Split schema into individual statements
-	statements := strings.Split(schemaSQL, ";")
+	statements := strings.Split(cleanSQL, ";")
 
 	// Execute each statement
 	for _, stmt := range statements {
 		stmt = strings.TrimSpace(stmt)
-		if stmt == "" || strings.HasPrefix(stmt, "--") {
+		if stmt == "" {
 			continue
 		}
 
