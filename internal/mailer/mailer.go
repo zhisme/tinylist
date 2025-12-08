@@ -26,6 +26,7 @@ func New(cfg config.SMTPConfig) *Mailer {
 	}
 }
 
+// TODO: move to separate email template files if they get more complex
 // SendVerification sends a verification email
 func (m *Mailer) SendVerification(toEmail, toName, verifyURL string) error {
 	subject := "Please verify your email address"

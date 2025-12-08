@@ -60,12 +60,15 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, "email is required")
 		return
 	}
+
+  // TODO: named constants
 	if len(req.Email) > 254 || !emailRegex.MatchString(req.Email) {
 		response.BadRequest(w, "invalid email format")
 		return
 	}
 
 	// Trim name
+  // TODO: check constraints
 	req.Name = strings.TrimSpace(req.Name)
 	if len(req.Name) > 255 {
 		req.Name = req.Name[:255]
