@@ -280,3 +280,11 @@ This is a **self-hosted, open-source** application:
 - Integration tests for API endpoints, SMTP mock testing
 - Manual testing for real SMTP sending and K8s deployment
 - Load testing target: 1000+ subscribers, 100+ emails/minute
+
+## Notes for AI assistant
+- Always prioritize simplicity and minimalism in code changes
+- Ensure security best practices are followed, especially for public endpoints
+- Use conventional commits principles for commit messages
+- When adding features, consider resource constraints (keep memory usage low)
+- Refer to AGENTS.md for workflow and issue tracking using `bd` commands
+- Maintain clear separation between public and private API routes
