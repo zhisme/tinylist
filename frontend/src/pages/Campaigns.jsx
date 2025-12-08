@@ -234,7 +234,7 @@ function CampaignModal({ campaign, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              class="px-4 py-2 border rounded"
+              class="px-4 py-2 border rounded hover:bg-gray-100"
             >
               Cancel
             </button>

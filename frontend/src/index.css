@@ -4,3 +4,13 @@
 body {
   @apply bg-gray-50 text-gray-900 min-h-screen;
 }
+
+/* Tailwind v4 preflight doesn't set cursor:pointer by default */
+a,
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
