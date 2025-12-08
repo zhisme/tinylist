@@ -44,3 +44,4 @@ coverage.out
 *~.bak
 out/
 tinylist
+config.yaml
