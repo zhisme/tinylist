@@ -610,3 +610,53 @@ func (db *DB) GetAllSettings() (map[string]string, error) {
 
 	return settings, nil
 }
+
+// Campaign journal queries
+
+// CreateCampaignJournal inserts a campaign journal entry
+func (db *DB) CreateCampaignJournal(journal *models.CampaignJournal) error {
+	query := `
+		INSERT INTO campaign_journal (campaign_id, event_type, message, created_at)
+		VALUES (?, ?, ?, datetime('now'))
+		RETURNING id, created_at
+	`
+	var createdAt string
+	err := db.QueryRow(query, journal.CampaignID, journal.EventType, journal.Message).Scan(&journal.ID, &createdAt)
+	if err != nil {
+		return fmt.Errorf("failed to create campaign journal: %w", err)
+	}
+	journal.CreatedAt = parseTime(createdAt)
+	return nil
+}
+
+// GetCampaignJournal retrieves all journal entries for a campaign
+func (db *DB) GetCampaignJournal(campaignID int) ([]*models.CampaignJournal, error) {
+	query := `
+		SELECT id, campaign_id, event_type, message, created_at
+		FROM campaign_journal
+		WHERE campaign_id = ?
+		ORDER BY created_at DESC
+	`
+	rows, err := db.Query(query, campaignID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get campaign journal: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []*models.CampaignJournal
+	for rows.Next() {
+		var entry models.CampaignJournal
+		var createdAt string
+		if err := rows.Scan(&entry.ID, &entry.CampaignID, &entry.EventType, &entry.Message, &createdAt); err != nil {
+			return nil, fmt.Errorf("failed to scan campaign journal: %w", err)
+		}
+		entry.CreatedAt = parseTime(createdAt)
+		entries = append(entries, &entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating campaign journal: %w", err)
+	}
+
+	return entries, nil
+}

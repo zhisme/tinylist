@@ -20,10 +20,11 @@ type Campaign struct {
 
 // CampaignStatus constants
 const (
-	CampaignStatusDraft   = "draft"
-	CampaignStatusSending = "sending"
-	CampaignStatusSent    = "sent"
-	CampaignStatusFailed  = "failed"
+	CampaignStatusDraft     = "draft"
+	CampaignStatusSending   = "sending"
+	CampaignStatusSent      = "sent"
+	CampaignStatusFailed    = "failed"
+	CampaignStatusCancelled = "cancelled"
 )
 
 // CampaignLog represents a log entry for campaign sends
@@ -35,3 +36,20 @@ type CampaignLog struct {
 	Error        *string   `json:"error,omitempty"`
 	SentAt       time.Time `json:"sent_at"`
 }
+
+// CampaignJournal represents a lifecycle event for a campaign
+type CampaignJournal struct {
+	ID         int       `json:"id"`
+	CampaignID int       `json:"-"`
+	EventType  string    `json:"event_type"` // info, warning, error, success
+	Message    string    `json:"message"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// CampaignJournal event types
+const (
+	JournalEventInfo    = "info"
+	JournalEventWarning = "warning"
+	JournalEventError   = "error"
+	JournalEventSuccess = "success"
+)

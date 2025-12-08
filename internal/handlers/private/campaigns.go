@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -267,7 +268,7 @@ func (h *CampaignHandler) Send(w http.ResponseWriter, r *http.Request) {
 	// Start sending in background
 	go func() {
 		if err := h.worker.SendCampaign(campaign.ID); err != nil {
-			// Error is logged by worker
+			log.Printf("Campaign %s send failed: %v", campaign.UUID, err)
 		}
 	}()
 
@@ -275,6 +276,76 @@ func (h *CampaignHandler) Send(w http.ResponseWriter, r *http.Request) {
 		"message": "campaign sending started",
 		"id":      campaign.UUID,
 	})
+}
+
+// Cancel handles POST /api/private/campaigns/{id}/cancel
+func (h *CampaignHandler) Cancel(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		response.BadRequest(w, "campaign id is required")
+		return
+	}
+
+	// Get campaign to find internal ID
+	campaign, err := h.db.GetCampaignByUUID(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "failed to get campaign") {
+			response.NotFound(w, "campaign not found")
+			return
+		}
+		response.InternalError(w, "failed to get campaign")
+		return
+	}
+
+	// Check if campaign is sending
+	if !h.worker.IsSending(campaign.ID) {
+		response.BadRequest(w, "campaign is not currently sending")
+		return
+	}
+
+	// Cancel the campaign
+	if err := h.worker.CancelCampaign(campaign.ID); err != nil {
+		response.InternalError(w, "failed to cancel campaign")
+		return
+	}
+
+	response.OK(w, map[string]string{
+		"message": "campaign cancellation requested",
+		"id":      campaign.UUID,
+	})
+}
+
+// Journal handles GET /api/private/campaigns/{id}/journal
+func (h *CampaignHandler) Journal(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		response.BadRequest(w, "campaign id is required")
+		return
+	}
+
+	// Get campaign to find internal ID
+	campaign, err := h.db.GetCampaignByUUID(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "failed to get campaign") {
+			response.NotFound(w, "campaign not found")
+			return
+		}
+		response.InternalError(w, "failed to get campaign")
+		return
+	}
+
+	journal, err := h.db.GetCampaignJournal(campaign.ID)
+	if err != nil {
+		response.InternalError(w, "failed to get campaign journal")
+		return
+	}
+
+	// Ensure we return an empty array instead of null
+	if journal == nil {
+		journal = []*models.CampaignJournal{}
+	}
+
+	response.OK(w, journal)
 }
 
 // Routes returns a router with all campaign routes
@@ -286,5 +357,7 @@ func (h *CampaignHandler) Routes() chi.Router {
 	r.Put("/{id}", h.Update)
 	r.Delete("/{id}", h.Delete)
 	r.Post("/{id}/send", h.Send)
+	r.Post("/{id}/cancel", h.Cancel)
+	r.Get("/{id}/journal", h.Journal)
 	return r
 }

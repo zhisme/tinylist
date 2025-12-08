@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     subject         TEXT NOT NULL,
     body_text       TEXT NOT NULL,
     body_html       TEXT,
-    status          TEXT NOT NULL CHECK(status IN ('draft', 'sending', 'sent', 'failed')) DEFAULT 'draft',
+    status          TEXT NOT NULL CHECK(status IN ('draft', 'sending', 'sent', 'failed', 'cancelled')) DEFAULT 'draft',
     total_count     INTEGER NOT NULL DEFAULT 0,
     sent_count      INTEGER NOT NULL DEFAULT 0,
     failed_count    INTEGER NOT NULL DEFAULT 0,
@@ -52,6 +52,17 @@ CREATE TABLE IF NOT EXISTS campaign_logs (
 
 CREATE INDEX IF NOT EXISTS idx_campaign_logs_campaign_id ON campaign_logs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_logs_subscriber_id ON campaign_logs(subscriber_id);
+
+-- campaign_journal (campaign lifecycle events)
+CREATE TABLE IF NOT EXISTS campaign_journal (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id     INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    event_type      TEXT NOT NULL CHECK(event_type IN ('info', 'warning', 'error', 'success')),
+    message         TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_campaign_journal_campaign_id ON campaign_journal(campaign_id);
 
 -- settings table (key-value config storage)
 CREATE TABLE IF NOT EXISTS settings (

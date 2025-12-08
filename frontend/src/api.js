@@ -43,6 +43,8 @@ export const campaigns = {
   update: (id, data) => request(`/campaigns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id) => request(`/campaigns/${id}`, { method: 'DELETE' }),
   send: (id) => request(`/campaigns/${id}/send`, { method: 'POST' }),
+  cancel: (id) => request(`/campaigns/${id}/cancel`, { method: 'POST' }),
+  journal: (id) => request(`/campaigns/${id}/journal`),
 };
 
 // Stats API (to be implemented on backend)

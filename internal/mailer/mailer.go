@@ -1,17 +1,24 @@
 package mailer
 
 import (
+	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/zhisme/tinylist/internal/config"
 	"gopkg.in/gomail.v2"
 )
 
+// Default timeout for SMTP operations
+const defaultSendTimeout = 30 * time.Second
+
 // Mailer handles email sending
 type Mailer struct {
-	dialer    *gomail.Dialer
-	fromEmail string
-	fromName  string
+	dialer      *gomail.Dialer
+	fromEmail   string
+	fromName    string
+	sendTimeout time.Duration
 }
 
 // New creates a new Mailer instance
@@ -20,9 +27,10 @@ func New(cfg config.SMTPConfig) *Mailer {
 	dialer.SSL = cfg.TLS && cfg.Port == 465
 
 	return &Mailer{
-		dialer:    dialer,
-		fromEmail: cfg.FromEmail,
-		fromName:  cfg.FromName,
+		dialer:      dialer,
+		fromEmail:   cfg.FromEmail,
+		fromName:    cfg.FromName,
+		sendTimeout: defaultSendTimeout,
 	}
 }
 
@@ -62,22 +70,27 @@ If you didn't subscribe to this list, you can safely ignore this email.
 	return m.send(toEmail, toName, subject, textBody, htmlBody)
 }
 
-// SendCampaign sends a campaign email
-func (m *Mailer) SendCampaign(toEmail, toName, subject, textBody, htmlBody, unsubscribeURL string) error {
+// SendCampaign sends a campaign email with context support for cancellation/timeout
+func (m *Mailer) SendCampaign(ctx context.Context, toEmail, toName, subject, textBody, htmlBody, unsubscribeURL string) error {
 	// Append unsubscribe link to text body
 	textBody = textBody + fmt.Sprintf("\n\n---\nTo unsubscribe, visit: %s", unsubscribeURL)
 
 	// Append unsubscribe link to HTML body if present
 	if htmlBody != "" {
 		unsubscribeHTML := fmt.Sprintf(`<p style="color: #999; font-size: 12px; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
-<a href="%s" style="color: #999;">Unsubscribe</a></p></body>`, unsubscribeURL)
-		htmlBody = htmlBody[:len(htmlBody)-7] + unsubscribeHTML // Replace </body>
+<a href="%s" style="color: #999;">Unsubscribe</a></p>`, unsubscribeURL)
+		// Try to insert before </body>, otherwise just append
+		if idx := strings.LastIndex(strings.ToLower(htmlBody), "</body>"); idx != -1 {
+			htmlBody = htmlBody[:idx] + unsubscribeHTML + htmlBody[idx:]
+		} else {
+			htmlBody = htmlBody + unsubscribeHTML
+		}
 	}
 
-	return m.send(toEmail, toName, subject, textBody, htmlBody)
+	return m.sendWithContext(ctx, toEmail, toName, subject, textBody, htmlBody)
 }
 
-// send sends an email
+// send sends an email (blocking, no timeout)
 func (m *Mailer) send(toEmail, toName, subject, textBody, htmlBody string) error {
 	msg := gomail.NewMessage()
 	msg.SetAddressHeader("From", m.fromEmail, m.fromName)
@@ -93,6 +106,42 @@ func (m *Mailer) send(toEmail, toName, subject, textBody, htmlBody string) error
 	}
 
 	return nil
+}
+
+// sendWithContext sends an email with context support for cancellation/timeout
+func (m *Mailer) sendWithContext(ctx context.Context, toEmail, toName, subject, textBody, htmlBody string) error {
+	msg := gomail.NewMessage()
+	msg.SetAddressHeader("From", m.fromEmail, m.fromName)
+	msg.SetAddressHeader("To", toEmail, toName)
+	msg.SetHeader("Subject", subject)
+	msg.SetBody("text/plain", textBody)
+	if htmlBody != "" {
+		msg.AddAlternative("text/html", htmlBody)
+	}
+
+	// Create a timeout context if parent doesn't have deadline
+	sendCtx := ctx
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		sendCtx, cancel = context.WithTimeout(ctx, m.sendTimeout)
+		defer cancel()
+	}
+
+	// Run send in goroutine so we can respect context cancellation
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- m.dialer.DialAndSend(msg)
+	}()
+
+	select {
+	case <-sendCtx.Done():
+		return fmt.Errorf("send cancelled or timed out: %w", sendCtx.Err())
+	case err := <-errCh:
+		if err != nil {
+			return fmt.Errorf("failed to send email: %w", err)
+		}
+		return nil
+	}
 }
 
 // IsConfigured returns true if SMTP is configured

@@ -7,6 +7,7 @@ export function Campaigns() {
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState(null);
+  const [journalCampaign, setJournalCampaign] = useState(null);
 
   useEffect(() => {
     loadCampaigns();
@@ -65,6 +66,17 @@ export function Campaigns() {
     }
   }
 
+  async function handleCancel(id) {
+    if (!confirm('Are you sure you want to cancel this campaign?')) return;
+    try {
+      await campaigns.cancel(id);
+      alert('Campaign cancellation requested');
+      loadCampaigns();
+    } catch (err) {
+      alert('Failed to cancel: ' + err.message);
+    }
+  }
+
   return (
     <div>
       <div class="flex justify-between items-center mb-6">
@@ -94,6 +106,8 @@ export function Campaigns() {
               onEdit={() => setEditingCampaign(campaign)}
               onDelete={() => handleDelete(campaign.id)}
               onSend={() => handleSend(campaign.id)}
+              onCancel={() => handleCancel(campaign.id)}
+              onJournal={() => setJournalCampaign(campaign)}
             />
           ))}
         </div>
@@ -115,16 +129,25 @@ export function Campaigns() {
           onSave={(data) => handleUpdate(editingCampaign.id, data)}
         />
       )}
+
+      {/* Journal Modal */}
+      {journalCampaign && (
+        <JournalModal
+          campaign={journalCampaign}
+          onClose={() => setJournalCampaign(null)}
+        />
+      )}
     </div>
   );
 }
 
-function CampaignCard({ campaign, onEdit, onDelete, onSend }) {
+function CampaignCard({ campaign, onEdit, onDelete, onSend, onCancel, onJournal }) {
   const statusColors = {
     draft: 'bg-gray-100 text-gray-800',
     sending: 'bg-blue-100 text-blue-800',
     sent: 'bg-green-100 text-green-800',
     failed: 'bg-red-100 text-red-800',
+    cancelled: 'bg-orange-100 text-orange-800',
   };
 
   return (
@@ -167,6 +190,20 @@ function CampaignCard({ campaign, onEdit, onDelete, onSend }) {
               </button>
             </>
           )}
+          {campaign.status === 'sending' && (
+            <button
+              onClick={onCancel}
+              class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={onJournal}
+            class="text-gray-500 hover:text-gray-700 text-sm"
+          >
+            Journal
+          </button>
         </div>
       </div>
     </div>
@@ -246,6 +283,87 @@ function CampaignModal({ campaign, onClose, onSave }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function JournalModal({ campaign, onClose }) {
+  const [journal, setJournal] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadJournal();
+  }, [campaign.id]);
+
+  async function loadJournal() {
+    try {
+      setLoading(true);
+      const result = await campaigns.journal(campaign.id);
+      setJournal(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const eventTypeStyles = {
+    info: 'bg-blue-100 text-blue-800',
+    warning: 'bg-yellow-100 text-yellow-800',
+    error: 'bg-red-100 text-red-800',
+    success: 'bg-green-100 text-green-800',
+  };
+
+  function formatTime(timestamp) {
+    return new Date(timestamp).toLocaleString();
+  }
+
+  return (
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center overflow-auto py-8">
+      <div class="bg-white rounded-lg p-6 w-full max-w-xl mx-4">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold">Campaign Journal</h2>
+          <button
+            onClick={onClose}
+            class="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            &times;
+          </button>
+        </div>
+        <p class="text-gray-500 text-sm mb-4">{campaign.subject}</p>
+
+        {error && <div class="text-red-500 mb-4">Error: {error}</div>}
+
+        {loading ? (
+          <div class="text-gray-500 text-center py-8">Loading...</div>
+        ) : journal.length === 0 ? (
+          <div class="text-gray-500 text-center py-8">No journal entries yet.</div>
+        ) : (
+          <div class="space-y-2 max-h-96 overflow-y-auto">
+            {journal.map(entry => (
+              <div key={entry.id} class="border-l-4 border-gray-200 pl-3 py-2">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class={`px-2 py-0.5 rounded text-xs ${eventTypeStyles[entry.event_type]}`}>
+                    {entry.event_type}
+                  </span>
+                  <span class="text-xs text-gray-400">{formatTime(entry.created_at)}</span>
+                </div>
+                <p class="text-sm">{entry.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div class="mt-4 flex justify-end">
+          <button
+            onClick={onClose}
+            class="px-4 py-2 border rounded hover:bg-gray-100"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
