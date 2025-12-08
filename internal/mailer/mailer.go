@@ -19,6 +19,11 @@ type Mailer struct {
 	fromEmail   string
 	fromName    string
 	sendTimeout time.Duration
+	host        string
+	port        int
+	username    string
+	password    string
+	tls         bool
 }
 
 // New creates a new Mailer instance
@@ -31,7 +36,51 @@ func New(cfg config.SMTPConfig) *Mailer {
 		fromEmail:   cfg.FromEmail,
 		fromName:    cfg.FromName,
 		sendTimeout: defaultSendTimeout,
+		host:        cfg.Host,
+		port:        cfg.Port,
+		username:    cfg.Username,
+		password:    cfg.Password,
+		tls:         cfg.TLS,
 	}
+}
+
+// Reconfigure updates the mailer with new SMTP settings
+func (m *Mailer) Reconfigure(host string, port int, username, password, fromEmail, fromName string, tls bool) {
+	dialer := gomail.NewDialer(host, port, username, password)
+	dialer.SSL = tls && port == 465
+
+	m.dialer = dialer
+	m.fromEmail = fromEmail
+	m.fromName = fromName
+	m.host = host
+	m.port = port
+	m.username = username
+	m.password = password
+	m.tls = tls
+}
+
+// SendTest sends a test email to verify SMTP configuration
+func (m *Mailer) SendTest(toEmail string) error {
+	subject := "TinyList - Test Email"
+	textBody := fmt.Sprintf(`This is a test email from TinyList.
+
+If you received this email, your SMTP configuration is working correctly.
+
+Best regards,
+%s`, m.fromName)
+
+	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+<h2>TinyList - Test Email</h2>
+<p>This is a test email from TinyList.</p>
+<p>If you received this email, your SMTP configuration is working correctly.</p>
+<p style="margin-top: 40px;">Best regards,<br>%s</p>
+</body>
+</html>`, m.fromName)
+
+	return m.send(toEmail, "", subject, textBody, htmlBody)
 }
 
 // TODO: move to separate email template files if they get more complex
@@ -146,5 +195,5 @@ func (m *Mailer) sendWithContext(ctx context.Context, toEmail, toName, subject, 
 
 // IsConfigured returns true if SMTP is configured
 func (m *Mailer) IsConfigured() bool {
-	return m.dialer.Host != "" && m.fromEmail != ""
+	return m.host != "" && m.fromEmail != ""
 }

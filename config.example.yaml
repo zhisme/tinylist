@@ -6,13 +6,16 @@ server:
 database:
   path: "./data/tinylist.db"
 
+# SMTP settings are configured via the admin UI (Settings page)
+# and stored in the database. This section can be left empty.
+# Alternatively, you can pre-configure SMTP here for deployments.
 smtp:
-  host: "smtp.gmail.com"
+  host: ""
   port: 587
-  username: "your-email@gmail.com"
-  password: "your-app-password"
-  from_email: "newsletter@example.com"
-  from_name: "Newsletter"
+  username: ""
+  password: ""
+  from_email: ""
+  from_name: ""
   tls: true
 
 sending:

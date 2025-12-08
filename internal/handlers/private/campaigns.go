@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zhisme/tinylist/internal/db"
 	"github.com/zhisme/tinylist/internal/handlers/response"
+	"github.com/zhisme/tinylist/internal/mailer"
 	"github.com/zhisme/tinylist/internal/models"
 	"github.com/zhisme/tinylist/internal/worker"
 )
@@ -20,11 +21,12 @@ import (
 type CampaignHandler struct {
 	db     *db.DB
 	worker *worker.CampaignWorker
+	mailer *mailer.Mailer
 }
 
 // NewCampaignHandler creates a new campaign handler
-func NewCampaignHandler(database *db.DB, w *worker.CampaignWorker) *CampaignHandler {
-	return &CampaignHandler{db: database, worker: w}
+func NewCampaignHandler(database *db.DB, w *worker.CampaignWorker, m *mailer.Mailer) *CampaignHandler {
+	return &CampaignHandler{db: database, worker: w, mailer: m}
 }
 
 // CreateCampaignRequest represents the request body for creating a campaign
@@ -236,6 +238,12 @@ func (h *CampaignHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // Send handles POST /api/private/campaigns/{id}/send
 func (h *CampaignHandler) Send(w http.ResponseWriter, r *http.Request) {
+	// Check if SMTP is configured before doing anything else
+	if !h.mailer.IsConfigured() {
+		response.BadRequest(w, "SMTP is not configured. Please configure SMTP settings before sending campaigns.")
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		response.BadRequest(w, "campaign id is required")

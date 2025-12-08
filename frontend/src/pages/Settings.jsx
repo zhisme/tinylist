@@ -1,4 +1,5 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
+import { settings } from '../api.js';
 
 export function Settings() {
   const [smtpConfig, setSmtpConfig] = useState({
@@ -10,7 +11,26 @@ export function Settings() {
     from_name: '',
     tls: true,
   });
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  async function loadSettings() {
+    try {
+      const data = await settings.getSMTP();
+      setSmtpConfig(data);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to load settings: ' + err.message });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function handleChange(field, value) {
     setSmtpConfig(prev => ({ ...prev, [field]: value }));
@@ -19,14 +39,62 @@ export function Settings() {
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
-    // TODO: Implement settings save API when backend supports it
-    alert('Settings API not yet implemented on backend');
-    setSaving(false);
+    setMessage(null);
+    try {
+      await settings.updateSMTP(smtpConfig);
+      setMessage({ type: 'success', text: 'Settings saved successfully' });
+      // Reload to get masked password
+      loadSettings();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to save settings: ' + err.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTestEmail(e) {
+    e.preventDefault();
+    if (!testEmail) {
+      setMessage({ type: 'error', text: 'Please enter an email address for testing' });
+      return;
+    }
+    setTesting(true);
+    setMessage(null);
+    try {
+      await settings.testSMTP(testEmail);
+      setMessage({ type: 'success', text: 'Test email sent successfully! Check your inbox.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Failed to send test email: ' + err.message });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  const isConfigured = smtpConfig.host && smtpConfig.from_email;
+
+  if (loading) {
+    return (
+      <div class="flex items-center justify-center h-64">
+        <div class="text-gray-500">Loading settings...</div>
+      </div>
+    );
   }
 
   return (
     <div>
       <h1 class="text-2xl font-bold mb-6">Settings</h1>
+
+      {!isConfigured && (
+        <div class="mb-4 p-4 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
+          <strong>SMTP not configured.</strong> Configure your SMTP settings below to enable email sending.
+        </div>
+      )}
+
+      {message && (
+        <div class={`mb-4 p-4 rounded-lg ${message.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-green-50 text-green-800 border border-green-200'}`}>
+          {message.text}
+        </div>
+      )}
 
       <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
         <h2 class="text-lg font-semibold mb-4">SMTP Configuration</h2>
@@ -47,7 +115,7 @@ export function Settings() {
               <input
                 type="number"
                 value={smtpConfig.port}
-                onInput={(e) => handleChange('port', parseInt(e.target.value))}
+                onInput={(e) => handleChange('port', parseInt(e.target.value) || 587)}
                 class="w-full border rounded px-3 py-2"
               />
             </div>
@@ -67,6 +135,7 @@ export function Settings() {
                 value={smtpConfig.password}
                 onInput={(e) => handleChange('password', e.target.value)}
                 class="w-full border rounded px-3 py-2"
+                placeholder={smtpConfig.password === '***' ? '(unchanged)' : ''}
               />
             </div>
             <div>
@@ -113,11 +182,32 @@ export function Settings() {
         </form>
       </div>
 
-      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6 max-w-2xl">
-        <p class="text-yellow-800 text-sm">
-          <strong>Note:</strong> SMTP settings are currently configured via config.yaml file.
-          The settings API will be available in a future update.
+      <div class="bg-white rounded-lg shadow p-6 mt-6 max-w-2xl">
+        <h2 class="text-lg font-semibold mb-4">Test Email</h2>
+        <p class="text-gray-600 text-sm mb-4">
+          Send a test email to verify your SMTP configuration is working correctly.
         </p>
+        <form onSubmit={handleTestEmail} class="flex gap-4">
+          <input
+            type="email"
+            value={testEmail}
+            onInput={(e) => setTestEmail(e.target.value)}
+            class="flex-1 border rounded px-3 py-2"
+            placeholder="Enter email address"
+          />
+          <button
+            type="submit"
+            disabled={testing || !smtpConfig.host}
+            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50"
+          >
+            {testing ? 'Sending...' : 'Send Test Email'}
+          </button>
+        </form>
+        {!smtpConfig.host && (
+          <p class="text-yellow-600 text-sm mt-2">
+            Configure SMTP settings above before sending a test email.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -51,3 +51,10 @@ export const campaigns = {
 export const stats = {
   get: () => request('/stats'),
 };
+
+// Settings API
+export const settings = {
+  getSMTP: () => request('/settings/smtp'),
+  updateSMTP: (data) => request('/settings/smtp', { method: 'PUT', body: JSON.stringify(data) }),
+  testSMTP: (email) => request('/settings/smtp/test', { method: 'POST', body: JSON.stringify({ email }) }),
+};

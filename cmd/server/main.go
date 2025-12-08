@@ -39,8 +39,11 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	// Initialize mailer
+	// Initialize mailer with config defaults
 	mail := mailer.New(cfg.SMTP)
+
+	// Override with DB settings if available
+	loadSMTPFromDB(database, mail)
 
 	// Initialize campaign worker
 	campaignWorker := worker.NewCampaignWorker(database, mail, cfg.Sending, cfg.Server.PublicURL)
@@ -75,10 +78,12 @@ func main() {
 
 	// Private API routes
 	subscriberHandler := private.NewSubscriberHandler(database)
-	campaignHandler := private.NewCampaignHandler(database, campaignWorker)
+	campaignHandler := private.NewCampaignHandler(database, campaignWorker, mail)
+	settingsHandler := private.NewSettingsHandler(database, mail)
 	r.Route("/api/private", func(r chi.Router) {
 		r.Mount("/subscribers", subscriberHandler.Routes())
 		r.Mount("/campaigns", campaignHandler.Routes())
+		r.Mount("/settings", settingsHandler.Routes())
 	})
 
 	// Server configuration
@@ -119,4 +124,38 @@ func main() {
 	}
 
 	log.Println("Server stopped")
+}
+
+// loadSMTPFromDB loads SMTP settings from database and reconfigures the mailer
+func loadSMTPFromDB(database *db.DB, mail *mailer.Mailer) {
+	settings, err := database.GetAllSettings()
+	if err != nil {
+		log.Printf("Warning: failed to load settings from DB: %v", err)
+		return
+	}
+
+	// Check if SMTP is configured in DB
+	host := settings["smtp_host"]
+	if host == "" {
+		return // No DB settings, use config file
+	}
+
+	port := 587
+	if portStr := settings["smtp_port"]; portStr != "" {
+		fmt.Sscanf(portStr, "%d", &port)
+	}
+
+	tls := settings["smtp_tls"] == "true"
+
+	mail.Reconfigure(
+		host,
+		port,
+		settings["smtp_username"],
+		settings["smtp_password"],
+		settings["smtp_from_email"],
+		settings["smtp_from_name"],
+		tls,
+	)
+
+	log.Println("SMTP settings loaded from database")
 }
