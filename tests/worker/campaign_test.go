@@ -1,6 +1,10 @@
-package worker
+package worker_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/zhisme/tinylist/internal/worker"
+)
 
 func TestReplaceTemplateVars(t *testing.T) {
 	tests := []struct {
@@ -63,7 +67,7 @@ func TestReplaceTemplateVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ReplaceTemplateVars(tt.text, tt.userName, tt.email)
+			result := worker.ReplaceTemplateVars(tt.text, tt.userName, tt.email)
 			if result != tt.expected {
 				t.Errorf("ReplaceTemplateVars() = %q, want %q", result, tt.expected)
 			}
