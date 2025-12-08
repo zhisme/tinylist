@@ -444,6 +444,29 @@ func (db *DB) UpdateCampaignStatus(id int, status string) error {
 	return nil
 }
 
+// UpdateCampaign updates campaign subject, body_text, and body_html
+func (db *DB) UpdateCampaign(campaign *models.Campaign) error {
+	query := `
+		UPDATE campaigns
+		SET subject = ?, body_text = ?, body_html = ?
+		WHERE id = ?
+	`
+	result, err := db.Exec(query, campaign.Subject, campaign.BodyText, campaign.BodyHTML, campaign.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update campaign: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
 // UpdateCampaignCounts updates campaign counters
 func (db *DB) UpdateCampaignCounts(id, totalCount, sentCount, failedCount int) error {
 	query := `

@@ -17,6 +17,7 @@ import (
 	"github.com/zhisme/tinylist/internal/handlers/private"
 	"github.com/zhisme/tinylist/internal/handlers/public"
 	"github.com/zhisme/tinylist/internal/mailer"
+	"github.com/zhisme/tinylist/internal/worker"
 )
 
 func main() {
@@ -40,6 +41,9 @@ func main() {
 
 	// Initialize mailer
 	mail := mailer.New(cfg.SMTP)
+
+	// Initialize campaign worker
+	campaignWorker := worker.NewCampaignWorker(database, mail, cfg.Sending, cfg.Server.PublicURL)
 
 	// Initialize router
 	r := chi.NewRouter()
@@ -71,8 +75,10 @@ func main() {
 
 	// Private API routes
 	subscriberHandler := private.NewSubscriberHandler(database)
+	campaignHandler := private.NewCampaignHandler(database, campaignWorker)
 	r.Route("/api/private", func(r chi.Router) {
 		r.Mount("/subscribers", subscriberHandler.Routes())
+		r.Mount("/campaigns", campaignHandler.Routes())
 	})
 
 	// Server configuration

@@ -44,6 +44,11 @@ func NoContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Accepted sends a 202 Accepted response
+func Accepted(w http.ResponseWriter, data interface{}) {
+	JSON(w, http.StatusAccepted, data)
+}
+
 // BadRequest sends a 400 Bad Request error
 func BadRequest(w http.ResponseWriter, message string) {
 	JSON(w, http.StatusBadRequest, Error{
