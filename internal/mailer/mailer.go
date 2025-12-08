@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zhisme/tinylist/internal/config"
 	"gopkg.in/gomail.v2"
 )
 
@@ -14,6 +13,7 @@ import (
 const defaultSendTimeout = 30 * time.Second
 
 // Mailer handles email sending
+// SMTP settings are loaded from database via Reconfigure()
 type Mailer struct {
 	dialer      *gomail.Dialer
 	fromEmail   string
@@ -26,21 +26,12 @@ type Mailer struct {
 	tls         bool
 }
 
-// New creates a new Mailer instance
-func New(cfg config.SMTPConfig) *Mailer {
-	dialer := gomail.NewDialer(cfg.Host, cfg.Port, cfg.Username, cfg.Password)
-	dialer.SSL = cfg.TLS && cfg.Port == 465
-
+// New creates a new unconfigured Mailer instance
+// SMTP settings must be loaded from database using Reconfigure()
+func New() *Mailer {
 	return &Mailer{
-		dialer:      dialer,
-		fromEmail:   cfg.FromEmail,
-		fromName:    cfg.FromName,
+		dialer:      gomail.NewDialer("", 587, "", ""),
 		sendTimeout: defaultSendTimeout,
-		host:        cfg.Host,
-		port:        cfg.Port,
-		username:    cfg.Username,
-		password:    cfg.Password,
-		tls:         cfg.TLS,
 	}
 }
 

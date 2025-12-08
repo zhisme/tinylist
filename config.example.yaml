@@ -7,16 +7,7 @@ database:
   path: "./data/tinylist.db"
 
 # SMTP settings are configured via the admin UI (Settings page)
-# and stored in the database. This section can be left empty.
-# Alternatively, you can pre-configure SMTP here for deployments.
-smtp:
-  host: ""
-  port: 587
-  username: ""
-  password: ""
-  from_email: ""
-  from_name: ""
-  tls: true
+# and stored in the database.
 
 sending:
   rate_limit: 10        # Emails per second

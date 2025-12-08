@@ -9,10 +9,10 @@ import (
 )
 
 // Config holds all configuration for the application
+// Note: SMTP settings are configured via admin UI and stored in database
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
-	SMTP     SMTPConfig     `yaml:"smtp"`
 	Sending  SendingConfig  `yaml:"sending"`
 }
 
@@ -24,16 +24,6 @@ type ServerConfig struct {
 
 type DatabaseConfig struct {
 	Path string `yaml:"path"`
-}
-
-type SMTPConfig struct {
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	Username  string `yaml:"username"`
-	Password  string `yaml:"password"`
-	FromEmail string `yaml:"from_email"`
-	FromName  string `yaml:"from_name"`
-	TLS       bool   `yaml:"tls"`
 }
 
 type SendingConfig struct {
@@ -76,15 +66,6 @@ func defaultConfig() *Config {
 		},
 		Database: DatabaseConfig{
 			Path: "./data/tinylist.db",
-		},
-		SMTP: SMTPConfig{
-			Host:      "",
-			Port:      587,
-			Username:  "",
-			Password:  "",
-			FromEmail: "",
-			FromName:  "Newsletter",
-			TLS:       true,
 		},
 		Sending: SendingConfig{
 			RateLimit:  10,

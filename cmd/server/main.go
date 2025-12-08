@@ -39,10 +39,10 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	// Initialize mailer with config defaults
-	mail := mailer.New(cfg.SMTP)
+	// Initialize mailer (unconfigured - settings loaded from DB)
+	mail := mailer.New()
 
-	// Override with DB settings if available
+	// Load SMTP settings from database
 	loadSMTPFromDB(database, mail)
 
 	// Initialize campaign worker
@@ -137,7 +137,8 @@ func loadSMTPFromDB(database *db.DB, mail *mailer.Mailer) {
 	// Check if SMTP is configured in DB
 	host := settings["smtp_host"]
 	if host == "" {
-		return // No DB settings, use config file
+		log.Println("SMTP not configured - configure via admin UI Settings page")
+		return
 	}
 
 	port := 587
