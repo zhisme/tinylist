@@ -77,7 +77,7 @@ func main() {
 	})
 
 	// Private API routes
-	subscriberHandler := private.NewSubscriberHandler(database)
+	subscriberHandler := private.NewSubscriberHandler(database, mail, cfg.Server.PublicURL)
 	campaignHandler := private.NewCampaignHandler(database, campaignWorker, mail)
 	settingsHandler := private.NewSettingsHandler(database, mail)
 	r.Route("/api/private", func(r chi.Router) {

@@ -33,6 +33,7 @@ export const subscribers = {
   get: (id) => request(`/subscribers/${id}`),
   create: (data) => request('/subscribers', { method: 'POST', body: JSON.stringify(data) }),
   delete: (id) => request(`/subscribers/${id}`, { method: 'DELETE' }),
+  sendVerification: (id) => request(`/subscribers/${id}/send-verification`, { method: 'POST' }),
 };
 
 // Campaigns API

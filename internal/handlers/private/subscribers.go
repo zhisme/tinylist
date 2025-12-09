@@ -13,17 +13,24 @@ import (
 	"github.com/google/uuid"
 	"github.com/zhisme/tinylist/internal/db"
 	"github.com/zhisme/tinylist/internal/handlers/response"
+	"github.com/zhisme/tinylist/internal/mailer"
 	"github.com/zhisme/tinylist/internal/models"
 )
 
 // SubscriberHandler handles subscriber-related requests
 type SubscriberHandler struct {
-	db *db.DB
+	db        *db.DB
+	mailer    *mailer.Mailer
+	publicURL string
 }
 
 // NewSubscriberHandler creates a new subscriber handler
-func NewSubscriberHandler(database *db.DB) *SubscriberHandler {
-	return &SubscriberHandler{db: database}
+func NewSubscriberHandler(database *db.DB, m *mailer.Mailer, publicURL string) *SubscriberHandler {
+	return &SubscriberHandler{
+		db:        database,
+		mailer:    m,
+		publicURL: strings.TrimSuffix(publicURL, "/"),
+	}
 }
 
 // CreateRequest represents the request body for creating a subscriber
@@ -194,6 +201,56 @@ func (h *SubscriberHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	response.NoContent(w)
 }
 
+// SendVerification handles POST /api/private/subscribers/{id}/send-verification
+func (h *SubscriberHandler) SendVerification(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		response.BadRequest(w, "subscriber id is required")
+		return
+	}
+
+	sub, err := h.db.GetSubscriberByUUID(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "failed to get subscriber") {
+			response.NotFound(w, "subscriber not found")
+			return
+		}
+		response.InternalError(w, "failed to get subscriber")
+		return
+	}
+
+	// Only allow sending verification for pending subscribers
+	if sub.Status != models.StatusPending {
+		response.BadRequest(w, "can only send verification email to pending subscribers")
+		return
+	}
+
+	// Check if mailer is configured
+	if !h.mailer.IsConfigured() {
+		response.BadRequest(w, "SMTP is not configured")
+		return
+	}
+
+	// Check if verify token exists
+	if sub.VerifyToken == nil || *sub.VerifyToken == "" {
+		response.InternalError(w, "subscriber has no verification token")
+		return
+	}
+
+	verifyURL := h.publicURL + "/api/verify/" + *sub.VerifyToken
+	name := sub.Name
+	if name == "" {
+		name = "there"
+	}
+
+	if err := h.mailer.SendVerification(sub.Email, name, verifyURL); err != nil {
+		response.InternalError(w, "failed to send verification email")
+		return
+	}
+
+	response.OK(w, map[string]string{"message": "verification email sent"})
+}
+
 // Routes returns a router with all subscriber routes
 func (h *SubscriberHandler) Routes() chi.Router {
 	r := chi.NewRouter()
@@ -201,5 +258,6 @@ func (h *SubscriberHandler) Routes() chi.Router {
 	r.Get("/", h.List)
 	r.Get("/{id}", h.Get)
 	r.Delete("/{id}", h.Delete)
+	r.Post("/{id}/send-verification", h.SendVerification)
 	return r
 }

@@ -46,6 +46,15 @@ export function Subscribers() {
     }
   }
 
+  async function handleSendVerification(id) {
+    try {
+      await subscribers.sendVerification(id);
+      alert('Verification email sent');
+    } catch (err) {
+      alert('Failed to send: ' + err.message);
+    }
+  }
+
   return (
     <div>
       <div class="flex justify-between items-center mb-6">
@@ -105,7 +114,15 @@ export function Subscribers() {
                   <td class="px-4 py-3 text-sm text-gray-500">
                     {new Date(sub.created_at).toLocaleDateString()}
                   </td>
-                  <td class="px-4 py-3">
+                  <td class="px-4 py-3 space-x-2">
+                    {sub.status === 'pending' && (
+                      <button
+                        onClick={() => handleSendVerification(sub.id)}
+                        class="text-blue-500 hover:text-blue-700"
+                      >
+                        Send Verification
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDelete(sub.id)}
                       class="text-red-500 hover:text-red-700"
