@@ -1,0 +1,43 @@
+# Dependencies and build artifacts
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+tinylist
+
+# Test and debug
+*.test
+*.out
+*.prof
+coverage.txt
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Frontend (separate build)
+frontend/
+
+# Data and logs
+data/
+*.db
+*.log
+
+# Kubernetes
+k8s/
+
+# Documentation
+*.md
+!config.yaml
+
+# Beads issue tracking
+.beads/
