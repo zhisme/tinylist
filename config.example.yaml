@@ -13,3 +13,8 @@ sending:
   rate_limit: 10        # Emails per second
   max_retries: 3
   batch_size: 100
+
+# Admin authentication (Basic Auth) - REQUIRED
+auth:
+  username: admin
+  password: your-secure-password

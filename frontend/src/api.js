@@ -2,15 +2,55 @@
 // Set VITE_API_URL at build time for different configurations
 const API_BASE = import.meta.env.VITE_API_URL || '/api/private';
 
+// Auth credentials storage
+let authCredentials = null;
+
+export function setAuthCredentials(username, password) {
+  if (username && password) {
+    authCredentials = btoa(`${username}:${password}`);
+    sessionStorage.setItem('tinylist_auth', authCredentials);
+  } else {
+    authCredentials = null;
+    sessionStorage.removeItem('tinylist_auth');
+  }
+}
+
+export function getStoredAuth() {
+  if (!authCredentials) {
+    authCredentials = sessionStorage.getItem('tinylist_auth');
+  }
+  return authCredentials;
+}
+
+export function clearAuth() {
+  authCredentials = null;
+  sessionStorage.removeItem('tinylist_auth');
+}
+
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Add auth header if credentials exist
+  const auth = getStoredAuth();
+  if (auth) {
+    headers['Authorization'] = `Basic ${auth}`;
+  }
+
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   });
+
+  if (response.status === 401) {
+    clearAuth();
+    const error = new Error('Unauthorized');
+    error.status = 401;
+    throw error;
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
@@ -22,6 +62,18 @@ async function request(path, options = {}) {
   }
 
   return response.json();
+}
+
+// Validate credentials
+export async function validateCredentials(username, password) {
+  const auth = btoa(`${username}:${password}`);
+  const response = await fetch(`${API_BASE}/stats`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${auth}`,
+    },
+  });
+  return response.ok;
 }
 
 // Subscribers API

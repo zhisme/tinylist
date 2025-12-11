@@ -14,6 +14,12 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
 	Sending  SendingConfig  `yaml:"sending"`
+	Auth     AuthConfig     `yaml:"auth"`
+}
+
+type AuthConfig struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type ServerConfig struct {
@@ -53,7 +59,22 @@ func LoadFromFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// Validate checks that required configuration is present
+func (c *Config) Validate() error {
+	if c.Auth.Password == "" {
+		return fmt.Errorf("auth.password is required - admin panel cannot run without authentication")
+	}
+	if c.Auth.Username == "" {
+		return fmt.Errorf("auth.username is required")
+	}
+	return nil
 }
 
 // defaultConfig returns configuration with sensible defaults
@@ -72,6 +93,10 @@ func defaultConfig() *Config {
 			MaxRetries: 3,
 			RetryDelay: 5 * time.Second,
 			BatchSize:  100,
+		},
+		Auth: AuthConfig{
+			Username: "admin",
+			Password: "",
 		},
 	}
 }

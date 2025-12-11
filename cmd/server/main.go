@@ -17,6 +17,7 @@ import (
 	"github.com/zhisme/tinylist/internal/handlers/private"
 	"github.com/zhisme/tinylist/internal/handlers/public"
 	"github.com/zhisme/tinylist/internal/mailer"
+	authmw "github.com/zhisme/tinylist/internal/middleware"
 	"github.com/zhisme/tinylist/internal/worker"
 )
 
@@ -76,15 +77,18 @@ func main() {
 		r.Get("/unsubscribe/{token}", unsubscribeHandler.Unsubscribe)
 	})
 
-	// Private API routes
+	// Private API routes (protected by Basic Auth)
 	subscriberHandler := private.NewSubscriberHandler(database, mail, cfg.Server.PublicURL)
 	campaignHandler := private.NewCampaignHandler(database, campaignWorker, mail)
 	settingsHandler := private.NewSettingsHandler(database, mail)
 	r.Route("/api/private", func(r chi.Router) {
+		r.Use(authmw.BasicAuth(cfg.Auth))
 		r.Mount("/subscribers", subscriberHandler.Routes())
 		r.Mount("/campaigns", campaignHandler.Routes())
 		r.Mount("/settings", settingsHandler.Routes())
 	})
+
+	log.Printf("Basic Auth enabled for /api/private (user: %s)", cfg.Auth.Username)
 
 	// Server configuration
 	port := cfg.Server.Port

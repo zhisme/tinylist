@@ -188,6 +188,13 @@ config:
     # -- Batch size for sending
     batchSize: 100
 
+  # -- Admin authentication (Basic Auth) - REQUIRED
+  auth:
+    # -- Admin username
+    username: admin
+    # -- Admin password (REQUIRED - server will not start without this)
+    password: ""
+
 # -- Persistence configuration for SQLite database
 persistence:
   # -- Enable persistence

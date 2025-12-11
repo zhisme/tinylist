@@ -18,3 +18,7 @@ data:
       rate_limit: {{ .Values.config.sending.rateLimit }}
       max_retries: {{ .Values.config.sending.maxRetries }}
       batch_size: {{ .Values.config.sending.batchSize }}
+
+    auth:
+      username: {{ .Values.config.auth.username | quote }}
+      password: {{ .Values.config.auth.password | quote }}
