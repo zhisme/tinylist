@@ -3,6 +3,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Base path for assets (e.g., /admin/ if served at /admin)
+ARG VITE_BASE_PATH=/
+
 # Copy package files for caching
 COPY package.json package-lock.json* ./
 
@@ -12,8 +15,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build production bundle
-RUN npm run build
+# Build production bundle with base path
+RUN VITE_BASE_PATH=${VITE_BASE_PATH} npm run build
 
 # Runtime stage
 FROM nginx:alpine

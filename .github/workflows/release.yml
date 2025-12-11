@@ -180,6 +180,8 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.FRONTEND_IMAGE }}:latest
+          build-args: |
+            VITE_BASE_PATH=/
           cache-from: type=gha
           cache-to: type=gha,mode=max
           labels: |
