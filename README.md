@@ -20,12 +20,14 @@ A lightweight, API-first email list manager with SQLite backend. Designed for re
 helm install tinylist oci://ghcr.io/zhisme/tinylist/charts/tinylist \
   --namespace tinylist \
   --create-namespace \
-  --set config.publicUrl=https://newsletter.example.com \
+  --set config.publicUrl=https://example.com \
   --set config.auth.password=your-secure-password \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
-  --set "ingress.hosts[0].host=newsletter.example.com"
+  --set "ingress.hosts[0].host=example.com"
 ```
+
+Access the admin UI at `https://example.com/tinylist`
 
 ### Docker Compose
 
@@ -76,7 +78,7 @@ auth:
 docker compose up -d
 ```
 
-Access admin UI at `http://localhost:8081`, login with your configured credentials, and configure SMTP in Settings.
+Access admin UI at `http://localhost:8081/tinylist`, login with your configured credentials, and configure SMTP in Settings.
 
 ## Architecture
 
@@ -115,55 +117,8 @@ Access admin UI at `http://localhost:8081`, login with your configured credentia
 | `GET /api/unsubscribe/:token` | Public | Unsubscribe links |
 | `/api/private/*` | Basic Auth | Admin API (subscribers, campaigns, settings) |
 
-## Deployment Options
+## Helm Deployment
 
-### Option 1: Dedicated Domain
-
-Deploy TinyList on its own subdomain (e.g., `newsletter.example.com`):
-
-```yaml
-# values.yaml
-config:
-  publicUrl: "https://newsletter.example.com"
-  auth:
-    username: admin
-    password: "your-secure-password"
-
-ingress:
-  enabled: true
-  className: nginx
-  hosts:
-    - host: newsletter.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-          service: frontend
-        - path: /api
-          pathType: Prefix
-          service: backend
-  tls:
-    - secretName: tinylist-tls
-      hosts:
-        - newsletter.example.com
-```
-
-### Option 2: Subpath on Existing Domain
-
-Deploy TinyList at a subpath (e.g., `example.com/tinylist`):
-
-**Step 1**: Build a custom frontend image with the base path, or trigger the GitHub Actions workflow:
-```bash
-# Via GitHub Actions (recommended):
-# Go to Actions → Release → Run workflow
-# Set base_path: /tinylist/
-# Set image_suffix: -tinylist
-
-# Or build locally:
-cd frontend
-docker build --build-arg VITE_BASE_PATH=/tinylist/ -t your-registry/tinylist-frontend:tinylist .
-```
-
-**Step 2**: Deploy with Helm:
 ```yaml
 # values.yaml
 config:
@@ -172,29 +127,27 @@ config:
     username: admin
     password: "your-secure-password"
 
-frontend:
-  image:
-    tag: "latest-tinylist"  # Use the custom-built image
-
 ingress:
   enabled: true
   className: nginx
-  # Enable path rewriting for subpath deployment
-  rewriteTarget: true
   hosts:
     - host: example.com
-      paths:
-        - path: /tinylist(/|$)(.*)
-          pathType: ImplementationSpecific
-          service: frontend
-        - path: /api(/|$)(.*)
-          pathType: ImplementationSpecific
-          service: backend
+  tls:
+    - secretName: tinylist-tls
+      hosts:
+        - example.com
 ```
 
-**Note**: `rewriteTarget: true` adds nginx-ingress annotations to strip the path prefix before forwarding to the services.
+```bash
+helm install tinylist oci://ghcr.io/zhisme/tinylist/charts/tinylist \
+  --namespace tinylist \
+  --create-namespace \
+  -f values.yaml
+```
 
-### Option 3: Build from Source
+The admin UI will be available at `https://example.com/tinylist`
+
+### Build from Source
 
 ```bash
 # Backend
@@ -243,7 +196,7 @@ auth:
 | `config.auth.username` | Admin username | `admin` |
 | `config.auth.password` | Admin password (required) | `""` |
 | `ingress.enabled` | Enable ingress | `false` |
-| `ingress.rewriteTarget` | Enable path rewriting | `false` |
+| `ingress.rewriteTarget` | Enable path rewriting | `true` |
 | `persistence.enabled` | Enable SQLite persistence | `true` |
 | `persistence.size` | PVC size | `1Gi` |
 

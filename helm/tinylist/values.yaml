@@ -224,9 +224,8 @@ ingress:
   className: ""
 
   # -- Enable path rewriting (for nginx-ingress)
-  # Set to true when deploying at a subpath (e.g., /admin)
-  # This adds nginx.ingress.kubernetes.io/rewrite-target annotation
-  rewriteTarget: false
+  # Required for /tinylist subpath routing
+  rewriteTarget: true
 
   # -- Ingress annotations
   annotations: {}
@@ -234,40 +233,17 @@ ingress:
     # cert-manager.io/cluster-issuer: letsencrypt-prod
 
   # -- Ingress hosts configuration
-  #
-  # Example 1: Dedicated domain (newsletter.example.com)
-  #   hosts:
-  #     - host: newsletter.example.com
-  #       paths:
-  #         - path: /
-  #           pathType: Prefix
-  #           service: frontend
-  #         - path: /api
-  #           pathType: Prefix
-  #           service: backend
-  #
-  # Example 2: Subpath on existing domain (example.com/tinylist)
-  # NOTE: Set rewriteTarget: true for this to work with nginx-ingress
-  # NOTE: Requires frontend image built with VITE_BASE_PATH=/tinylist/
-  #   hosts:
-  #     - host: example.com
-  #       paths:
-  #         - path: /tinylist(/|$)(.*)
-  #           pathType: ImplementationSpecific
-  #           service: frontend
-  #         - path: /api(/|$)(.*)
-  #           pathType: ImplementationSpecific
-  #           service: backend
+  # Frontend is always served at /tinylist path
   hosts:
-    - host: newsletter.example.com
+    - host: example.com
       paths:
-        # Frontend serves the admin UI
-        - path: /
-          pathType: Prefix
+        # Frontend admin UI at /tinylist
+        - path: /tinylist(/|$)(.*)
+          pathType: ImplementationSpecific
           service: frontend
-        # API routes go to backend
-        - path: /api
-          pathType: Prefix
+        # API routes
+        - path: /api(/|$)(.*)
+          pathType: ImplementationSpecific
           service: backend
 
   # -- TLS configuration
