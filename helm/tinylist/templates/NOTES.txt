@@ -1,0 +1,32 @@
+TinyList has been deployed!
+
+{{- if .Values.ingress.enabled }}
+Access the application at:
+{{- range $host := .Values.ingress.hosts }}
+  - http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else }}
+
+To access the application, run:
+
+  # Frontend (Admin UI)
+  kubectl port-forward svc/{{ include "tinylist.frontend.name" . }} 8081:{{ .Values.frontend.service.port }} -n {{ .Release.Namespace }}
+  # Then open http://localhost:8081
+
+  # Backend API
+  kubectl port-forward svc/{{ include "tinylist.backend.name" . }} 8080:{{ .Values.backend.service.port }} -n {{ .Release.Namespace }}
+  # API available at http://localhost:8080
+{{- end }}
+
+Next steps:
+1. Configure SMTP settings via the admin UI at /settings
+2. Add your first subscriber or embed the subscribe form on your website
+
+{{- if not .Values.config.publicUrl }}
+
+WARNING: config.publicUrl is not set!
+Email verification links will not work correctly.
+Set it to your public URL (e.g., https://newsletter.example.com)
+{{- end }}
+
+For more information, visit: https://github.com/zh/tinylist

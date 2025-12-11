@@ -1,0 +1,25 @@
+apiVersion: v2
+name: tinylist
+description: A lightweight, API-first email list manager with SQLite backend
+type: application
+
+# Chart version - automatically updated by release workflow
+version: 0.0.0
+
+# App version - automatically updated by release workflow (matches git tag)
+appVersion: "v0.0.0"
+
+home: https://github.com/zh/tinylist
+sources:
+  - https://github.com/zh/tinylist
+
+keywords:
+  - email
+  - newsletter
+  - mailing-list
+  - smtp
+  - sqlite
+
+maintainers:
+  - name: zh
+    url: https://github.com/zh

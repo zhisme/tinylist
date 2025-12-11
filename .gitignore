@@ -43,5 +43,5 @@ coverage.out
 *.swp
 *~.bak
 out/
-tinylist
+/tinylist
 config.yaml

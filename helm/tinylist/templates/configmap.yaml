@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tinylist.backend.name" . }}-config
+  labels:
+    {{- include "tinylist.backend.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      host: {{ .Values.config.host | quote }}
+      port: {{ .Values.config.port }}
+      public_url: {{ .Values.config.publicUrl | quote }}
+
+    database:
+      path: {{ .Values.config.databasePath | quote }}
+
+    sending:
+      rate_limit: {{ .Values.config.sending.rateLimit }}
+      max_retries: {{ .Values.config.sending.maxRetries }}
+      batch_size: {{ .Values.config.sending.batchSize }}
