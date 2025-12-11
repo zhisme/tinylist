@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [preact(), tailwindcss()],
   // Base path for assets - set via VITE_BASE_PATH env var or defaults to '/'
-  // For deployment at /admin, build with: VITE_BASE_PATH=/admin/ npm run build
+  // For deployment at /tinylist, build with: VITE_BASE_PATH=/tinylist/ npm run build
   base: process.env.VITE_BASE_PATH || '/',
   server: {
     proxy: {

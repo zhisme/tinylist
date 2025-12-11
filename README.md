@@ -149,8 +149,21 @@ ingress:
 
 ### Option 2: Subpath on Existing Domain
 
-Deploy TinyList at a subpath (e.g., `example.com/admin`):
+Deploy TinyList at a subpath (e.g., `example.com/tinylist`):
 
+**Step 1**: Build a custom frontend image with the base path, or trigger the GitHub Actions workflow:
+```bash
+# Via GitHub Actions (recommended):
+# Go to Actions → Release → Run workflow
+# Set base_path: /tinylist/
+# Set image_suffix: -tinylist
+
+# Or build locally:
+cd frontend
+docker build --build-arg VITE_BASE_PATH=/tinylist/ -t your-registry/tinylist-frontend:tinylist .
+```
+
+**Step 2**: Deploy with Helm:
 ```yaml
 # values.yaml
 config:
@@ -158,6 +171,10 @@ config:
   auth:
     username: admin
     password: "your-secure-password"
+
+frontend:
+  image:
+    tag: "latest-tinylist"  # Use the custom-built image
 
 ingress:
   enabled: true
@@ -167,7 +184,7 @@ ingress:
   hosts:
     - host: example.com
       paths:
-        - path: /admin(/|$)(.*)
+        - path: /tinylist(/|$)(.*)
           pathType: ImplementationSpecific
           service: frontend
         - path: /api(/|$)(.*)

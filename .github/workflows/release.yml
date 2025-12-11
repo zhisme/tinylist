@@ -4,6 +4,16 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      base_path:
+        description: 'Frontend base path (e.g., /tinylist/ for subpath deployment)'
+        required: false
+        default: '/'
+      image_suffix:
+        description: 'Image tag suffix (e.g., -tinylist)'
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -178,10 +188,10 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.version }}
-            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.version.outputs.version }}${{ inputs.image_suffix || '' }}
+            ${{ env.FRONTEND_IMAGE }}:latest${{ inputs.image_suffix || '' }}
           build-args: |
-            VITE_BASE_PATH=/
+            VITE_BASE_PATH=${{ inputs.base_path || '/' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           labels: |

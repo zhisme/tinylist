@@ -246,12 +246,13 @@ ingress:
   #           pathType: Prefix
   #           service: backend
   #
-  # Example 2: Subpath on existing domain (example.com/admin)
+  # Example 2: Subpath on existing domain (example.com/tinylist)
   # NOTE: Set rewriteTarget: true for this to work with nginx-ingress
+  # NOTE: Requires frontend image built with VITE_BASE_PATH=/tinylist/
   #   hosts:
   #     - host: example.com
   #       paths:
-  #         - path: /admin(/|$)(.*)
+  #         - path: /tinylist(/|$)(.*)
   #           pathType: ImplementationSpecific
   #           service: frontend
   #         - path: /api(/|$)(.*)
