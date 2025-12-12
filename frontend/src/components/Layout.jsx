@@ -1,6 +1,6 @@
 import { Link } from 'preact-router/match';
 
-export function Layout({ children, onLogout }) {
+export function Layout({ children }) {
   return (
     <div class="min-h-screen flex">
       {/* Sidebar */}
@@ -15,16 +15,6 @@ export function Layout({ children, onLogout }) {
           <NavLink href="/campaigns">Campaigns</NavLink>
           <NavLink href="/settings">Settings</NavLink>
         </nav>
-        {onLogout && (
-          <div class="p-4 border-t border-gray-700">
-            <button
-              onClick={onLogout}
-              class="w-full px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
       </aside>
 
       {/* Main content */}
