@@ -1,6 +1,7 @@
-// API base URL - defaults to relative path for K8s ingress routing
+// API base URL - defaults to /tinylist/api/private for K8s deployment
+// Frontend nginx proxies /tinylist/api/* to backend at /api/*
 // Set VITE_API_URL at build time for different configurations
-const API_BASE = import.meta.env.VITE_API_URL || '/api/private';
+const API_BASE = import.meta.env.VITE_API_URL || '/tinylist/api/private';
 
 // Auth credentials storage
 let authCredentials = null;

@@ -176,6 +176,10 @@ config:
   # -- Server port
   port: 8080
 
+  # -- API base path for subpath deployment
+  # Set to "/tinylist" to serve API at /tinylist/api/*
+  apiBasePath: "/tinylist"
+
   # -- Database path (relative to /app in container)
   databasePath: "./data/tinylist.db"
 
@@ -223,28 +227,24 @@ ingress:
   # -- Ingress class name
   className: ""
 
-  # -- Enable path rewriting (for nginx-ingress)
-  # Required for /tinylist subpath routing
-  rewriteTarget: true
-
   # -- Ingress annotations
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # cert-manager.io/cluster-issuer: letsencrypt-prod
 
   # -- Ingress hosts configuration
-  # Frontend is always served at /tinylist path
+  # Backend handles /tinylist/api/* directly, frontend serves /tinylist/* static files
   hosts:
     - host: example.com
       paths:
-        # Frontend admin UI at /tinylist
-        - path: /tinylist(/|$)(.*)
-          pathType: ImplementationSpecific
-          service: frontend
-        # API routes
-        - path: /api(/|$)(.*)
-          pathType: ImplementationSpecific
+        # API routes go directly to backend (must be listed first for priority)
+        - path: /tinylist/api
+          pathType: Prefix
           service: backend
+        # Frontend static files
+        - path: /tinylist
+          pathType: Prefix
+          service: frontend
 
   # -- TLS configuration
   tls: []

@@ -23,9 +23,10 @@ type AuthConfig struct {
 }
 
 type ServerConfig struct {
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	PublicURL string `yaml:"public_url"`
+	Host        string `yaml:"host"`
+	Port        int    `yaml:"port"`
+	PublicURL   string `yaml:"public_url"`
+	APIBasePath string `yaml:"api_base_path"` // Base path for API routes (e.g., "/tinylist" for /tinylist/api/*)
 }
 
 type DatabaseConfig struct {
@@ -81,9 +82,10 @@ func (c *Config) Validate() error {
 func defaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Host:      "0.0.0.0",
-			Port:      8080,
-			PublicURL: "http://localhost:8080",
+			Host:        "0.0.0.0",
+			Port:        8080,
+			PublicURL:   "http://localhost:8080",
+			APIBasePath: "", // Empty = routes at /api/*, set to "/tinylist" for /tinylist/api/*
 		},
 		Database: DatabaseConfig{
 			Path: "./data/tinylist.db",

@@ -66,12 +66,15 @@ func main() {
 		fmt.Fprintf(w, `{"status":"healthy"}`)
 	})
 
+	// Determine API base path (e.g., "" for /api/*, "/tinylist" for /tinylist/api/*)
+	basePath := cfg.Server.APIBasePath
+
 	// Public API routes
 	subscribeHandler := public.NewSubscribeHandler(database, mail, cfg.Server.PublicURL)
 	verifyHandler := public.NewVerifyHandler(database)
 	unsubscribeHandler := public.NewUnsubscribeHandler(database)
 
-	r.Route("/api", func(r chi.Router) {
+	r.Route(basePath+"/api", func(r chi.Router) {
 		r.Post("/subscribe", subscribeHandler.Subscribe)
 		r.Get("/verify/{token}", verifyHandler.Verify)
 		r.Get("/unsubscribe/{token}", unsubscribeHandler.Unsubscribe)
@@ -81,14 +84,17 @@ func main() {
 	subscriberHandler := private.NewSubscriberHandler(database, mail, cfg.Server.PublicURL)
 	campaignHandler := private.NewCampaignHandler(database, campaignWorker, mail)
 	settingsHandler := private.NewSettingsHandler(database, mail)
-	r.Route("/api/private", func(r chi.Router) {
+	r.Route(basePath+"/api/private", func(r chi.Router) {
 		r.Use(authmw.BasicAuth(cfg.Auth))
 		r.Mount("/subscribers", subscriberHandler.Routes())
 		r.Mount("/campaigns", campaignHandler.Routes())
 		r.Mount("/settings", settingsHandler.Routes())
 	})
 
-	log.Printf("Basic Auth enabled for /api/private (user: %s)", cfg.Auth.Username)
+	if basePath != "" {
+		log.Printf("API routes mounted at %s/api/*", basePath)
+	}
+	log.Printf("Basic Auth enabled for %s/api/private (user: %s)", basePath, cfg.Auth.Username)
 
 	// Server configuration
 	port := cfg.Server.Port

@@ -10,6 +10,7 @@ data:
       host: {{ .Values.config.host | quote }}
       port: {{ .Values.config.port }}
       public_url: {{ .Values.config.publicUrl | quote }}
+      api_base_path: {{ .Values.config.apiBasePath | quote }}
 
     database:
       path: {{ .Values.config.databasePath | quote }}

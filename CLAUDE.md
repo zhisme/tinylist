@@ -25,25 +25,31 @@ TinyList is a lightweight, API-first email list manager with SQLite backend desi
 
 ## Project Architecture
 
-### API Namespace Design
+### URL Structure
 
-The API uses two distinct namespaces with important semantic differences:
+All routes are served under `/tinylist` subpath (configurable via `api_base_path`):
 
-**Public API (no namespace prefix):**
-- `POST /api/subscribe` - User self-subscription from website forms
-- `GET /api/verify/:token` - Email verification links
-- `GET /api/unsubscribe/:token` - Unsubscribe links
-- Rate-limited to prevent abuse
-- Token-based authentication for verify/unsubscribe
-- These routes are intentionally short for brevity in user-facing links
+**User-facing URLs:**
+- `/tinylist/` - Admin UI (frontend static files)
+- `/tinylist/api/subscribe` - Public subscription endpoint
+- `/tinylist/api/verify/:token` - Email verification links
+- `/tinylist/api/unsubscribe/:token` - Unsubscribe links
+- `/tinylist/api/private/*` - Admin API (Basic Auth protected)
 
-**Private API (explicit `/api/private/*` namespace):**
-- `/api/private/subscribers/*` - Admin subscriber CRUD
-- `/api/private/campaigns/*` - Campaign management
-- `/api/private/settings/*` - SMTP configuration
-- `/api/private/stats/*` - Analytics and dashboard statistics
-- Network-level isolation in K8s (v1.0), API keys in v1.1+
-- Explicit namespace for security clarity
+**Routing flow:**
+1. Ingress routes `/tinylist/api/*` directly to backend
+2. Ingress routes `/tinylist/*` to frontend nginx (static files)
+3. Backend serves API at configurable base path (default: `/tinylist/api/*`)
+4. No proxy hop through frontend - direct routing
+
+**Backend API endpoints (with default `/tinylist` base path):**
+- `POST /tinylist/api/subscribe` - User self-subscription from website forms
+- `GET /tinylist/api/verify/:token` - Email verification links
+- `GET /tinylist/api/unsubscribe/:token` - Unsubscribe links
+- `/tinylist/api/private/subscribers/*` - Admin subscriber CRUD
+- `/tinylist/api/private/campaigns/*` - Campaign management
+- `/tinylist/api/private/settings/*` - SMTP configuration
+- `/tinylist/api/private/stats/*` - Analytics and dashboard statistics
 
 ### Directory Structure
 
@@ -147,7 +153,7 @@ kubectl logs -f deployment/tinylist-frontend
 
 # Port forward for local testing
 kubectl port-forward svc/tinylist-backend 8080:8080
-kubectl port-forward svc/tinylist-frontend 8081:80
+kubectl port-forward svc/tinylist-frontend 8081:80  # Access at localhost:8081/tinylist
 ```
 
 ## Configuration
@@ -203,9 +209,10 @@ Environment variables use prefix `TINYLIST_` with nested paths using underscores
 
 ### Frontend-Backend Communication
 
-- Frontend is a separate Docker container (nginx serving static files)
-- Makes API calls to `/api/private/*` endpoints
-- In K8s: Ingress routes `/admin/*` to frontend, `/api/*` to backend
+- Frontend is a separate Docker container (nginx serving static files only)
+- Frontend makes API calls to `/tinylist/api/private/*` endpoints
+- In K8s: Ingress routes `/tinylist/api/*` to backend, `/tinylist/*` to frontend
+- Backend handles API routes directly (no proxy through frontend)
 - Frontend build is ~45-50KB gzipped total
 
 ## Resource Targets
@@ -270,7 +277,9 @@ When working with this codebase:
 This is a **self-hosted, open-source** application:
 - Users run their own instances (no SaaS)
 - Frontend and backend are separate containers
-- Ingress handles routing between them
+- All routes served under `/tinylist` subpath (configurable via `api_base_path`)
+- Ingress routes `/tinylist/api/*` to backend, `/tinylist/*` to frontend
+- Direct routing - no proxy hops between services
 - SQLite data persists via PVC
 - Users control when to upgrade (semantic versioning)
 

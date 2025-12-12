@@ -46,11 +46,13 @@ services:
   frontend:
     image: ghcr.io/zhisme/tinylist/frontend:latest
     ports:
-      - "8081:80"
+      - "8081:8080"
     depends_on:
       - backend
     restart: unless-stopped
 ```
+
+Note: For Docker Compose, you'll need a reverse proxy (nginx/traefik) to route `/tinylist/api/*` to backend and `/tinylist/*` to frontend.
 
 Create `config.yaml`:
 
@@ -86,36 +88,50 @@ Access admin UI at `http://localhost:8081/tinylist`, login with your configured 
 ┌─────────────────────────────────────────────────────────────┐
 │                         Ingress                             │
 │                    (nginx/traefik)                          │
-└─────────────────┬───────────────────────┬───────────────────┘
-                  │ /                     │ /api/*
-                  ▼                       ▼
-┌─────────────────────────┐   ┌─────────────────────────────┐
-│       Frontend          │   │          Backend            │
-│    (Preact + nginx)     │   │       (Go + SQLite)         │
-│                         │   │                             │
-│  - Admin dashboard      │   │  - REST API                 │
-│  - Subscriber mgmt      │   │  - Email sending (SMTP)     │
-│  - Campaign editor      │   │  - Double opt-in flow       │
-│  - SMTP settings        │   │  - Basic Auth               │
-│                         │   │                             │
-│  Port: 80               │   │  Port: 8080                 │
-└─────────────────────────┘   └──────────────┬──────────────┘
-                                             │
-                                             ▼
-                              ┌─────────────────────────────┐
-                              │      SQLite Database        │
-                              │   (PersistentVolume in K8s) │
-                              └─────────────────────────────┘
+└───────────────┬─────────────────────────┬───────────────────┘
+                │ /tinylist/api/*         │ /tinylist/*
+                ▼                         ▼
+┌───────────────────────────┐   ┌─────────────────────────────┐
+│         Backend           │   │         Frontend            │
+│      (Go + SQLite)        │   │     (Preact + nginx)        │
+│                           │   │                             │
+│  - REST API               │   │  - Admin dashboard          │
+│  - Email sending (SMTP)   │   │  - Static files only        │
+│  - Double opt-in flow     │   │                             │
+│  - Basic Auth             │   │  Port: 8080                 │
+│                           │   └─────────────────────────────┘
+│  Port: 8080               │
+└─────────────┬─────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│      SQLite Database        │
+│   (PersistentVolume in K8s) │
+└─────────────────────────────┘
 ```
+
+### URL Structure
+
+All routes are served under `/tinylist`:
+
+| URL | Description |
+|-----|-------------|
+| `/tinylist/` | Admin UI (frontend static files) |
+| `/tinylist/api/subscribe` | Public subscription endpoint |
+| `/tinylist/api/verify/:token` | Email verification links |
+| `/tinylist/api/unsubscribe/:token` | Unsubscribe links |
+| `/tinylist/api/private/*` | Admin API (Basic Auth protected) |
 
 ### API Endpoints
 
+The backend serves API routes directly at `/tinylist/api/*` (configurable via `api_base_path`):
+
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `POST /api/subscribe` | Public | User subscription from website forms |
-| `GET /api/verify/:token` | Public | Email verification links |
-| `GET /api/unsubscribe/:token` | Public | Unsubscribe links |
-| `/api/private/*` | Basic Auth | Admin API (subscribers, campaigns, settings) |
+| `POST /tinylist/api/subscribe` | Public | User subscription from website forms |
+| `GET /tinylist/api/verify/:token` | Public | Email verification links |
+| `GET /tinylist/api/unsubscribe/:token` | Public | Unsubscribe links |
+| `/tinylist/api/private/*` | Basic Auth | Admin API (subscribers, campaigns, settings) |
 
 ## Helm Deployment
 
@@ -193,10 +209,11 @@ auth:
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `config.publicUrl` | Public URL for email links | `""` |
+| `config.apiBasePath` | Base path for API routes | `"/tinylist"` |
 | `config.auth.username` | Admin username | `admin` |
 | `config.auth.password` | Admin password (required) | `""` |
 | `ingress.enabled` | Enable ingress | `false` |
-| `ingress.rewriteTarget` | Enable path rewriting | `true` |
+| `ingress.className` | Ingress class name | `""` |
 | `persistence.enabled` | Enable SQLite persistence | `true` |
 | `persistence.size` | PVC size | `1Gi` |
 
