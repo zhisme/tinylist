@@ -84,8 +84,10 @@ func main() {
 	subscriberHandler := private.NewSubscriberHandler(database, mail, cfg.Server.PublicURL)
 	campaignHandler := private.NewCampaignHandler(database, campaignWorker, mail)
 	settingsHandler := private.NewSettingsHandler(database, mail)
+	statsHandler := private.NewStatsHandler(database)
 	r.Route(basePath+"/api/private", func(r chi.Router) {
 		r.Use(authmw.BasicAuth(cfg.Auth))
+		r.Get("/stats", statsHandler.GetStats)
 		r.Mount("/subscribers", subscriberHandler.Routes())
 		r.Mount("/campaigns", campaignHandler.Routes())
 		r.Mount("/settings", settingsHandler.Routes())

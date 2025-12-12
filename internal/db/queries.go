@@ -660,3 +660,35 @@ func (db *DB) GetCampaignJournal(campaignID int) ([]*models.CampaignJournal, err
 
 	return entries, nil
 }
+
+// Stats queries
+
+// GetStats retrieves dashboard statistics
+func (db *DB) GetStats() (*models.Stats, error) {
+	stats := &models.Stats{}
+
+	// Get subscriber counts
+	err := db.QueryRow(`
+		SELECT
+			COUNT(*) as total,
+			SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as verified,
+			SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
+		FROM subscribers
+	`).Scan(&stats.TotalSubscribers, &stats.VerifiedSubscribers, &stats.PendingSubscribers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get subscriber stats: %w", err)
+	}
+
+	// Get campaign counts
+	err = db.QueryRow(`
+		SELECT
+			COUNT(*) as total,
+			SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent
+		FROM campaigns
+	`).Scan(&stats.TotalCampaigns, &stats.SentCampaigns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get campaign stats: %w", err)
+	}
+
+	return stats, nil
+}
