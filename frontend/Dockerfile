@@ -27,8 +27,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -rf /etc/nginx/templates && \
     chown -R nginx:nginx /etc/nginx/conf.d
 
-# Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy built assets from builder to /tinylist/ subdirectory
+# This matches the Vite base path so assets resolve correctly
+COPY --from=builder /app/dist /usr/share/nginx/html/tinylist
 
 # Set ownership for nginx directories (running as non-root)
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
