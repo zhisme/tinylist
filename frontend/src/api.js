@@ -10,7 +10,7 @@ async function request(path, options = {}) {
       'Content-Type': 'application/json',
       ...options.headers,
     },
-    credentials: 'same-origin', // Let browser handle Basic Auth
+    credentials: 'include', // Send credentials for cross-origin (CORS) requests
     ...options,
   });
 
