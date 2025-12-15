@@ -113,12 +113,12 @@ If you didn't subscribe to this list, you can safely ignore this email.
 // SendCampaign sends a campaign email with context support for cancellation/timeout
 func (m *Mailer) SendCampaign(ctx context.Context, toEmail, toName, subject, textBody, htmlBody, unsubscribeURL string) error {
 	// Append unsubscribe link to text body
-	textBody = textBody + fmt.Sprintf("\n\n---\nTo unsubscribe, visit: %s", unsubscribeURL)
+	textBody = textBody + fmt.Sprintf("\n\n---\nYou received this email because you are in my list of subscribers. I send these emails occasionally. Visit %s to unsubscribe instantly (no questions asked — you can always resubscribe).", unsubscribeURL)
 
 	// Append unsubscribe link to HTML body if present
 	if htmlBody != "" {
 		unsubscribeHTML := fmt.Sprintf(`<p style="color: #999; font-size: 12px; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
-<a href="%s" style="color: #999;">Unsubscribe</a></p>`, unsubscribeURL)
+You received this email because you are in my list of subscribers. I send these emails occasionally. <a href="%s" style="color: #666;">Click here</a> to unsubscribe instantly (no questions asked — you can always resubscribe).</p>`, unsubscribeURL)
 		// Try to insert before </body>, otherwise just append
 		if idx := strings.LastIndex(strings.ToLower(htmlBody), "</body>"); idx != -1 {
 			htmlBody = htmlBody[:idx] + unsubscribeHTML + htmlBody[idx:]
