@@ -2,7 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking. Use `bd` commands instead of markdown TODOs. See AGENTS.md for workflow details.
+## CRITICAL: Issue Tracking with Beads
+
+**DO NOT use the TodoWrite tool in this project. NEVER.**
+
+Use `bd` (beads) for ALL task tracking:
+```bash
+bd create --title="..." --type=task    # Before starting work
+bd update <id> --status=in_progress    # When working
+bd close <id>                          # When done
+bd sync                                # At session end
+```
+
+Quick reference: `bd ready` (find work), `bd list --status=open` (all open), `bd show <id>` (details)
 
 ## Project Overview
 
@@ -291,9 +303,9 @@ This is a **self-hosted, open-source** application:
 - Load testing target: 1000+ subscribers, 100+ emails/minute
 
 ## Notes for AI assistant
+- **USE BEADS, NOT TodoWrite** - Create beads before starting work, close when done
 - Always prioritize simplicity and minimalism in code changes
 - Ensure security best practices are followed, especially for public endpoints
 - Use conventional commits principles for commit messages
 - When adding features, consider resource constraints (keep memory usage low)
-- Refer to AGENTS.md for workflow and issue tracking using `bd` commands
 - Maintain clear separation between public and private API routes
