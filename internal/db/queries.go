@@ -252,6 +252,33 @@ func (db *DB) UpdateSubscriberStatus(id int, status string) error {
 	return nil
 }
 
+// UpdateSubscriberForResubscribe updates a subscriber for re-subscription
+// Sets status to pending and assigns a new verify token
+func (db *DB) UpdateSubscriberForResubscribe(id int, verifyToken string) error {
+	query := `
+		UPDATE subscribers
+		SET status = 'pending',
+		    verify_token = ?,
+		    verified_at = NULL,
+		    updated_at = datetime('now')
+		WHERE id = ?
+	`
+	result, err := db.Exec(query, verifyToken, id)
+	if err != nil {
+		return fmt.Errorf("failed to update subscriber for resubscribe: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
 // DeleteSubscriber permanently deletes a subscriber
 func (db *DB) DeleteSubscriber(id int) error {
 	query := "DELETE FROM subscribers WHERE id = ?"

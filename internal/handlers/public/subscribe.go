@@ -77,7 +77,28 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	// Check for existing subscriber
 	existing, err := h.db.GetSubscriberByEmail(req.Email)
 	if err == nil && existing != nil {
-		// Already subscribed - return success without revealing if they exist
+		// Handle based on current status
+		if existing.Status == models.StatusUnsubscribed {
+			// Allow resubscription - generate new verify token and reset status
+			verifyToken := uuid.New().String()
+			if err := h.db.UpdateSubscriberForResubscribe(existing.ID, verifyToken); err != nil {
+				response.InternalError(w, "subscription failed")
+				return
+			}
+
+			// Send verification email
+			if h.mailer.IsConfigured() {
+				verifyURL := h.publicURL + "/api/verify/" + verifyToken
+				name := existing.Name
+				if name == "" {
+					name = "there"
+				}
+				if err := h.mailer.SendVerification(existing.Email, name, verifyURL); err != nil {
+					// Log error but don't fail the request
+				}
+			}
+		}
+		// For pending/verified status, just return success without revealing status
 		response.OK(w, SubscribeResponse{
 			Message: "Please check your email to verify your subscription.",
 		})
