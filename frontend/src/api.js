@@ -1,6 +1,6 @@
-// API base URL - defaults to /tinylist/api/private for K8s deployment
-// Set VITE_API_URL at build time for different configurations
-const API_BASE = import.meta.env.VITE_API_URL || '/tinylist/api/private';
+// API base URL - uses the same base path as the frontend
+// Set VITE_API_URL to override completely, or VITE_BASE_PATH to change the prefix
+const API_BASE = import.meta.env.VITE_API_URL || `${__BASE_PATH__}/api/private`;
 
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`;

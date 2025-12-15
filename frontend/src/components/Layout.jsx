@@ -1,6 +1,6 @@
 import { Link } from 'preact-router/match';
 
-export function Layout({ children }) {
+export function Layout({ children, basePath = '' }) {
   return (
     <div class="min-h-screen flex">
       {/* Sidebar */}
@@ -10,10 +10,10 @@ export function Layout({ children }) {
           <p class="text-gray-400 text-sm">Email List Manager</p>
         </div>
         <nav class="mt-4 flex-1">
-          <NavLink href="/">Dashboard</NavLink>
-          <NavLink href="/subscribers">Subscribers</NavLink>
-          <NavLink href="/campaigns">Campaigns</NavLink>
-          <NavLink href="/settings">Settings</NavLink>
+          <NavLink href={`${basePath}/`}>Dashboard</NavLink>
+          <NavLink href={`${basePath}/subscribers`}>Subscribers</NavLink>
+          <NavLink href={`${basePath}/campaigns`}>Campaigns</NavLink>
+          <NavLink href={`${basePath}/settings`}>Settings</NavLink>
         </nav>
       </aside>
 
