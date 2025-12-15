@@ -47,8 +47,14 @@ func main() {
 	// Load SMTP settings from database
 	loadSMTPFromDB(database, mail)
 
+	// Determine API base path (e.g., "" for /api/*, "/tinylist" for /tinylist/api/*)
+	basePath := cfg.Server.APIBasePath
+
+	// Public URL with base path for generating links in emails (e.g., verification links)
+	publicURLWithBasePath := cfg.Server.PublicURL + basePath
+
 	// Initialize campaign worker
-	campaignWorker := worker.NewCampaignWorker(database, mail, cfg.Sending, cfg.Server.PublicURL)
+	campaignWorker := worker.NewCampaignWorker(database, mail, cfg.Sending, publicURLWithBasePath)
 
 	// Initialize router
 	r := chi.NewRouter()
@@ -73,11 +79,8 @@ func main() {
 		fmt.Fprintf(w, `{"status":"healthy"}`)
 	})
 
-	// Determine API base path (e.g., "" for /api/*, "/tinylist" for /tinylist/api/*)
-	basePath := cfg.Server.APIBasePath
-
 	// Public API routes
-	subscribeHandler := public.NewSubscribeHandler(database, mail, cfg.Server.PublicURL)
+	subscribeHandler := public.NewSubscribeHandler(database, mail, publicURLWithBasePath)
 	verifyHandler := public.NewVerifyHandler(database)
 	unsubscribeHandler := public.NewUnsubscribeHandler(database)
 
@@ -88,7 +91,7 @@ func main() {
 	})
 
 	// Private API routes (protected by Basic Auth)
-	subscriberHandler := private.NewSubscriberHandler(database, mail, cfg.Server.PublicURL)
+	subscriberHandler := private.NewSubscriberHandler(database, mail, publicURLWithBasePath)
 	campaignHandler := private.NewCampaignHandler(database, campaignWorker, mail)
 	settingsHandler := private.NewSettingsHandler(database, mail)
 	statsHandler := private.NewStatsHandler(database)
