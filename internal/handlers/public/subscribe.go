@@ -89,11 +89,7 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 			// Send verification email
 			if h.mailer.IsConfigured() {
 				verifyURL := h.publicURL + "/api/verify/" + verifyToken
-				name := existing.Name
-				if name == "" {
-					name = "there"
-				}
-				if err := h.mailer.SendVerification(existing.Email, name, verifyURL); err != nil {
+				if err := h.mailer.SendVerification(existing.Email, existing.Name, verifyURL); err != nil {
 					// Log error but don't fail the request
 				}
 			}
@@ -138,11 +134,7 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	// Send verification email
 	if h.mailer.IsConfigured() {
 		verifyURL := h.publicURL + "/api/verify/" + verifyToken
-		name := req.Name
-		if name == "" {
-			name = "there"
-		}
-		if err := h.mailer.SendVerification(req.Email, name, verifyURL); err != nil {
+		if err := h.mailer.SendVerification(req.Email, req.Name, verifyURL); err != nil {
 			// Log error but don't fail the request
 			// In production, we'd want proper logging here
 		}

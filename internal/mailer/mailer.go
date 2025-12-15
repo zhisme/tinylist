@@ -77,6 +77,12 @@ Best regards,
 // TODO: move to separate email template files if they get more complex
 // SendVerification sends a verification email
 func (m *Mailer) SendVerification(toEmail, toName, verifyURL string) error {
+	// Use fallback greeting for email body, but keep actual name for To header
+	greeting := toName
+	if greeting == "" {
+		greeting = "there"
+	}
+
 	subject := "Please verify your email address"
 	textBody := fmt.Sprintf(`Hi %s,
 
@@ -87,7 +93,7 @@ Thanks for subscribing! Please verify your email address by clicking the link be
 If you didn't subscribe to this list, you can safely ignore this email.
 
 Best regards,
-%s`, toName, verifyURL, m.fromName)
+%s`, greeting, verifyURL, m.fromName)
 
 	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
 <html>
@@ -105,7 +111,7 @@ Best regards,
 If you didn't subscribe to this list, you can safely ignore this email.
 </p>
 </body>
-</html>`, toName, verifyURL, verifyURL)
+</html>`, greeting, verifyURL, verifyURL)
 
 	return m.send(toEmail, toName, subject, textBody, htmlBody)
 }
