@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -130,6 +131,8 @@ func (h *VerifyHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		renderHTML(w, http.StatusInternalServerError, "Error", "Something went wrong. Please try again later.", false)
 		return
 	}
+
+	log.Printf(`{"event":"email_verified","email":"%s","status":"verified"}`, sub.Email)
 
 	renderHTML(w, http.StatusOK, "Email Verified", "Thank you! Your email address has been verified successfully.", true)
 }

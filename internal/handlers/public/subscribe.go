@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -130,6 +131,8 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		response.InternalError(w, "subscription failed")
 		return
 	}
+
+	log.Printf(`{"event":"new_subscription","email":"%s","name":"%s","status":"pending"}`, req.Email, req.Name)
 
 	// Send verification email
 	if h.mailer.IsConfigured() {
