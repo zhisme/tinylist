@@ -12,7 +12,7 @@ backend:
 
   image:
     # -- Backend image repository
-    repository: ghcr.io/zh/tinylist/backend
+    repository: ghcr.io/zhisme/tinylist/backend
     # -- Image pull policy
     pullPolicy: IfNotPresent
     # -- Image tag (defaults to chart appVersion)
@@ -94,7 +94,7 @@ frontend:
 
   image:
     # -- Frontend image repository
-    repository: ghcr.io/zh/tinylist/frontend
+    repository: ghcr.io/zhisme/tinylist/frontend
     # -- Image pull policy
     pullPolicy: IfNotPresent
     # -- Image tag (defaults to chart appVersion)
