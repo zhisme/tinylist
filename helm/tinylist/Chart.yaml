@@ -9,9 +9,9 @@ version: 0.0.0
 # App version - automatically updated by release workflow (matches git tag)
 appVersion: "v0.0.0"
 
-home: https://github.com/zh/tinylist
+home: https://github.com/zhisme/tinylist
 sources:
-  - https://github.com/zh/tinylist
+  - https://github.com/zhisme/tinylist
 
 keywords:
   - email
@@ -22,4 +22,4 @@ keywords:
 
 maintainers:
   - name: zh
-    url: https://github.com/zh
+    url: https://github.com/zhisme
