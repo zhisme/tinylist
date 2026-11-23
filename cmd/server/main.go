@@ -59,8 +59,13 @@ func main() {
 	// Initialize router
 	r := chi.NewRouter()
 
+	// Build CORS origins: always include PublicURL; extra_origins is for local
+	// dev (e.g. Vite) and should never be set in production.
+	allowedOrigins := []string{cfg.Server.PublicURL}
+	allowedOrigins = append(allowedOrigins, cfg.Server.ExtraOrigins...)
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:8080", cfg.Server.PublicURL},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -80,7 +85,7 @@ func main() {
 	})
 
 	// Public API routes
-	subscribeHandler := public.NewSubscribeHandler(database, mail, publicURLWithBasePath)
+	subscribeHandler := public.NewSubscribeHandler(database, mail, publicURLWithBasePath, cfg.Server.RequireVerification)
 	verifyHandler := public.NewVerifyHandler(database)
 	unsubscribeHandler := public.NewUnsubscribeHandler(database)
 
@@ -110,7 +115,7 @@ func main() {
 
 	// Server configuration
 	port := cfg.Server.Port
-  // TODO: maybe move to config yaml
+	// TODO: maybe move to config yaml
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		fmt.Sscanf(envPort, "%d", &port)
 	}
