@@ -4,7 +4,7 @@ A lightweight, API-first email list manager with SQLite backend. Designed for re
 
 ## Features
 
-- **Double opt-in** subscription flow with email verification
+- **Configurable opt-in flow** — double opt-in (email verification) or single opt-in
 - **Campaign management** with text and HTML email support
 - **Admin UI** for managing subscribers, campaigns, and SMTP settings
 - **Basic Auth** protection for admin endpoints
@@ -29,6 +29,21 @@ helm install tinylist oci://ghcr.io/zhisme/tinylist/charts/tinylist \
 
 Access the admin UI at `https://example.com/tinylist`
 
+### Docker
+
+The config file is optional — you can configure everything with environment variables:
+
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -e TINYLIST_AUTH_PASSWORD=changeme \
+  -e TINYLIST_SERVER_PUBLIC_URL=https://newsletter.example.com \
+  -v tinylist-data:/app/data \
+  ghcr.io/zhisme/tinylist/backend:latest
+```
+
+See the [Environment Variables](#environment-variables) reference for the full list.
+
 ### Docker Compose
 
 ```yaml
@@ -38,9 +53,11 @@ services:
     image: ghcr.io/zhisme/tinylist/backend:latest
     ports:
       - "8080:8080"
+    environment:
+      TINYLIST_AUTH_PASSWORD: changeme
+      TINYLIST_SERVER_PUBLIC_URL: https://newsletter.example.com
     volumes:
       - ./data:/app/data
-      - ./config.yaml:/app/config.yaml:ro
     restart: unless-stopped
 
   frontend:
@@ -52,35 +69,13 @@ services:
     restart: unless-stopped
 ```
 
-Note: For Docker Compose, you'll need a reverse proxy (nginx/traefik) to route `/tinylist/api/*` to backend and `/tinylist/*` to frontend.
-
-Create `config.yaml`:
-
-```yaml
-server:
-  host: "0.0.0.0"
-  port: 8080
-  public_url: "https://newsletter.example.com"
-
-database:
-  path: "./data/tinylist.db"
-
-sending:
-  rate_limit: 10
-  max_retries: 3
-  batch_size: 100
-
-# REQUIRED - server will not start without auth password
-auth:
-  username: admin
-  password: your-secure-password
-```
+> **Note:** A reverse proxy (nginx/traefik) is needed to route `/tinylist/api/*` to the backend and `/tinylist/*` to the frontend. Alternatively, you can use a `config.yaml` file (see [Configuration Reference](#configuration-reference)) and mount it as a volume if you prefer file-based config.
 
 ```bash
 docker compose up -d
 ```
 
-Access admin UI at `http://localhost:8081/tinylist`, login with your configured credentials, and configure SMTP in Settings.
+Access the admin UI at `http://localhost:8081/tinylist`, log in with your configured credentials, and configure SMTP in Settings.
 
 ## Architecture
 
@@ -97,7 +92,7 @@ Access admin UI at `http://localhost:8081/tinylist`, login with your configured 
 │                           │   │                             │
 │  - REST API               │   │  - Admin dashboard          │
 │  - Email sending (SMTP)   │   │  - Static files only        │
-│  - Double opt-in flow     │   │                             │
+│  - Configurable opt-in flow │   │                             │
 │  - Basic Auth             │   │  Port: 8080                 │
 │                           │   └─────────────────────────────┘
 │  Port: 8080               │
@@ -182,13 +177,27 @@ npm run build
 
 ## Configuration Reference
 
+Configuration is loaded in the following priority order (highest wins):
+
+1. **Environment variables** — always applied last, override everything
+2. **`config.yaml`** — optional; if the file is absent, defaults + env vars are used
+3. **Built-in defaults**
+
+This means a Docker deployment can omit the config file entirely.
+
 ### config.yaml
+
+The config file is optional. All fields have environment variable equivalents (see below).
 
 ```yaml
 server:
   host: "0.0.0.0"
   port: 8080
-  public_url: "https://newsletter.example.com"  # Required for email links
+  public_url: "https://newsletter.example.com"  # Used in email links and CORS
+  api_base_path: ""         # Set to "/tinylist" for subpath deployments
+  require_verification: true  # Set to false to skip the double opt-in confirmation email
+  # extra_origins:           # Additional CORS origins for local development only
+  #   - "http://localhost:5173"
 
 database:
   path: "./data/tinylist.db"
@@ -198,34 +207,50 @@ sending:
   max_retries: 3        # Retry failed sends
   batch_size: 100       # Subscribers per batch
 
-# REQUIRED - server will not start without this
+# REQUIRED — server will not start without auth.password
+# In Kubernetes, credentials are injected via a Secret instead (see Helm section).
 auth:
   username: admin
   password: your-secure-password
 ```
 
+> SMTP settings (host, port, credentials, from address) are configured through the **admin UI → Settings** page and stored in the database. There are no env vars or config file fields for SMTP.
+
+### Environment Variables
+
+Every `config.yaml` field has a corresponding `TINYLIST_*` environment variable. Env vars take precedence over the config file.
+
+| Variable | Config file equivalent | Default | Notes |
+|---|---|---|---|
+| `TINYLIST_AUTH_PASSWORD` | `auth.password` | *(none)* | **Required** |
+| `TINYLIST_AUTH_USERNAME` | `auth.username` | `admin` | |
+| `TINYLIST_SERVER_PUBLIC_URL` | `server.public_url` | `http://localhost:8080` | Used in email links & CORS |
+| `TINYLIST_SERVER_HOST` | `server.host` | `0.0.0.0` | |
+| `TINYLIST_SERVER_PORT` | `server.port` | `8080` | |
+| `TINYLIST_SERVER_API_BASE_PATH` | `server.api_base_path` | `""` | e.g. `/tinylist` |
+| `TINYLIST_SERVER_REQUIRE_VERIFICATION` | `server.require_verification` | `true` | `true` or `false` |
+| `TINYLIST_SERVER_EXTRA_ORIGINS` | `server.extra_origins` | `""` | Comma-separated; dev only |
+| `TINYLIST_DATABASE_PATH` | `database.path` | `./data/tinylist.db` | |
+| `TINYLIST_SENDING_RATE_LIMIT` | `sending.rate_limit` | `10` | Emails per second |
+| `TINYLIST_SENDING_MAX_RETRIES` | `sending.max_retries` | `3` | |
+| `TINYLIST_SENDING_BATCH_SIZE` | `sending.batch_size` | `100` | |
+
 ### Helm Values
+
+In the Helm chart, `auth.username` and `auth.password` are stored in a Kubernetes **Secret** (not the ConfigMap) and injected into the pod via the env vars above. All other settings go in the ConfigMap via `values.yaml`.
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `config.publicUrl` | Public URL for email links | `""` |
 | `config.apiBasePath` | Base path for API routes | `"/tinylist"` |
-| `config.auth.username` | Admin username | `admin` |
-| `config.auth.password` | Admin password (required) | `""` |
+| `config.auth.username` | Admin username (stored in Secret) | `admin` |
+| `config.auth.password` | Admin password — **required** (stored in Secret) | `""` |
 | `ingress.enabled` | Enable ingress | `false` |
 | `ingress.className` | Ingress class name | `""` |
 | `persistence.enabled` | Enable SQLite persistence | `true` |
 | `persistence.size` | PVC size | `1Gi` |
 
 See [values.yaml](helm/tinylist/values.yaml) for all options.
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Backend server port | `8080` |
-
-SMTP settings are configured via the admin UI (Settings page) and stored in the database.
 
 ## Resource Requirements
 

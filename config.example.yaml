@@ -1,20 +1,62 @@
+# TinyList configuration
+#
+# Every setting below can also be provided as an environment variable —
+# the config file is entirely optional when running in Docker.
+# Env vars take precedence over file values.
+#
+# Quick start (Docker, no config file):
+#
+#   docker run \
+#     -e TINYLIST_AUTH_PASSWORD=changeme \
+#     -e TINYLIST_SERVER_PUBLIC_URL=https://newsletter.example.com \
+#     -v tinylist-data:/app/data \
+#     ghcr.io/zhisme/tinylist/backend
+#
+# Full env var reference:
+#
+#   TINYLIST_SERVER_HOST                 (default: 0.0.0.0)
+#   TINYLIST_SERVER_PORT                 (default: 8080)
+#   TINYLIST_SERVER_PUBLIC_URL           (default: http://localhost:8080)
+#   TINYLIST_SERVER_API_BASE_PATH        (default: "")
+#   TINYLIST_SERVER_EXTRA_ORIGINS        comma-separated CORS origins, dev only
+#   TINYLIST_SERVER_REQUIRE_VERIFICATION true|false  (default: true)
+#   TINYLIST_DATABASE_PATH               (default: ./data/tinylist.db)
+#   TINYLIST_SENDING_RATE_LIMIT          emails/sec  (default: 10)
+#   TINYLIST_SENDING_MAX_RETRIES         (default: 3)
+#   TINYLIST_SENDING_BATCH_SIZE          (default: 100)
+#   TINYLIST_AUTH_USERNAME               (default: admin)
+#   TINYLIST_AUTH_PASSWORD               REQUIRED — no default
+
 server:
   host: "0.0.0.0"
   port: 8080
-  public_url: "https://newsletter.example.com"  # For verification links
+  public_url: "https://newsletter.example.com"  # Used in verification/unsubscribe links and CORS
+
+  # Additional CORS origins beyond public_url — ONLY needed for local development
+  # (e.g. a Vite dev server). Leave empty in production.
+  # extra_origins:
+  #   - "http://localhost:5173"
+
+  # Set to false to skip the double opt-in flow: subscribers are marked
+  # verified immediately on signup and receive campaigns without clicking
+  # a confirmation link. Defaults to true.
+  require_verification: true
 
 database:
   path: "./data/tinylist.db"
 
 # SMTP settings are configured via the admin UI (Settings page)
-# and stored in the database.
+# and stored in the database — there are no env vars for SMTP.
 
 sending:
   rate_limit: 10        # Emails per second
   max_retries: 3
   batch_size: 100
 
-# Admin authentication (Basic Auth) - REQUIRED
+# Admin authentication (Basic Auth)
+# In Kubernetes (Helm chart), credentials are stored in a Secret and injected
+# via TINYLIST_AUTH_USERNAME / TINYLIST_AUTH_PASSWORD instead of being written
+# here. For Docker or bare-metal, set them here or via env vars.
 auth:
   username: admin
-  password: your-secure-password
+  password: your-secure-password  # REQUIRED

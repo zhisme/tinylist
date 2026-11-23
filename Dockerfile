@@ -33,8 +33,8 @@ RUN mkdir -p /data && chown appuser:appuser /data
 # Copy binary from builder
 COPY --from=builder /app/tinylist .
 
-# Copy config if exists (optional, can be overridden via env vars)
-COPY --from=builder /app/config.yaml* ./
+# config.yaml is NOT baked into the image — mount it at runtime via a volume
+# or Kubernetes ConfigMap (see helm/tinylist for the chart, or docker-compose.example.yml).
 
 # Ensure appuser can read all files
 RUN chown -R appuser:appuser /app

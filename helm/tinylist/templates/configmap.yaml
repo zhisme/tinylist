@@ -20,6 +20,5 @@ data:
       max_retries: {{ .Values.config.sending.maxRetries }}
       batch_size: {{ .Values.config.sending.batchSize }}
 
-    auth:
-      username: {{ .Values.config.auth.username | quote }}
-      password: {{ .Values.config.auth.password | quote }}
+    # auth credentials are injected via the tinylist-auth Secret (env vars)
+    # TINYLIST_AUTH_USERNAME / TINYLIST_AUTH_PASSWORD — do not add them here.

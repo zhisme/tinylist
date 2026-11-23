@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/zhisme/tinylist/internal/db"
@@ -18,17 +19,19 @@ import (
 
 // SubscribeHandler handles public subscription requests
 type SubscribeHandler struct {
-	db        *db.DB
-	mailer    *mailer.Mailer
-	publicURL string
+	db                  *db.DB
+	mailer              *mailer.Mailer
+	publicURL           string
+	requireVerification bool
 }
 
 // NewSubscribeHandler creates a new subscribe handler
-func NewSubscribeHandler(database *db.DB, m *mailer.Mailer, publicURL string) *SubscribeHandler {
+func NewSubscribeHandler(database *db.DB, m *mailer.Mailer, publicURL string, requireVerification bool) *SubscribeHandler {
 	return &SubscribeHandler{
-		db:        database,
-		mailer:    m,
-		publicURL: strings.TrimSuffix(publicURL, "/"),
+		db:                  database,
+		mailer:              m,
+		publicURL:           strings.TrimSuffix(publicURL, "/"),
+		requireVerification: requireVerification,
 	}
 }
 
@@ -62,14 +65,14 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  // TODO: named constants
+	// TODO: named constants
 	if len(req.Email) > 254 || !emailRegex.MatchString(req.Email) {
 		response.BadRequest(w, "invalid email format")
 		return
 	}
 
 	// Trim name
-  // TODO: check constraints
+	// TODO: check constraints
 	req.Name = strings.TrimSpace(req.Name)
 	if len(req.Name) > 255 {
 		req.Name = req.Name[:255]
@@ -84,6 +87,16 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 			verifyToken := uuid.New().String()
 			if err := h.db.UpdateSubscriberForResubscribe(existing.ID, verifyToken); err != nil {
 				response.InternalError(w, "subscription failed")
+				return
+			}
+
+			if !h.requireVerification {
+				// Skip verification: promote straight to verified
+				if err := h.db.UpdateSubscriberStatus(existing.ID, models.StatusVerified); err != nil {
+					response.InternalError(w, "subscription failed")
+					return
+				}
+				response.OK(w, SubscribeResponse{Message: "You've been resubscribed successfully."})
 				return
 			}
 
@@ -110,14 +123,31 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	verifyToken := uuid.New().String()
 	unsubscribeToken := uuid.New().String()
 
+	// Determine initial status: skip verification if disabled.
+	subStatus := models.StatusPending
+	var verifyTokenPtr *string
+	if h.requireVerification {
+		verifyTokenPtr = &verifyToken
+	} else {
+		subStatus = models.StatusVerified
+		// No verify token needed; leave nil so the verify endpoint cannot be used.
+	}
+
+	now := time.Now()
+	var verifiedAt *time.Time
+	if subStatus == models.StatusVerified {
+		verifiedAt = &now
+	}
+
 	// Create subscriber
 	sub := &models.Subscriber{
 		UUID:             uuid.New().String(),
 		Email:            req.Email,
 		Name:             req.Name,
-		Status:           models.StatusPending,
-		VerifyToken:      &verifyToken,
+		Status:           subStatus,
+		VerifyToken:      verifyTokenPtr,
 		UnsubscribeToken: unsubscribeToken,
+		VerifiedAt:       verifiedAt,
 	}
 
 	if err := h.db.CreateSubscriber(sub); err != nil {
@@ -132,14 +162,19 @@ func (h *SubscribeHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf(`{"event":"new_subscription","email":"%s","name":"%s","status":"pending"}`, req.Email, req.Name)
+	log.Printf(`{"event":"new_subscription","email":"%s","status":"%s"}`, req.Email, subStatus)
+
+	if subStatus == models.StatusVerified {
+		// Verification skipped — subscriber is immediately active.
+		response.OK(w, SubscribeResponse{Message: "You've been subscribed successfully."})
+		return
+	}
 
 	// Send verification email
 	if h.mailer.IsConfigured() {
 		verifyURL := h.publicURL + "/api/verify/" + verifyToken
 		if err := h.mailer.SendVerification(req.Email, req.Name, verifyURL); err != nil {
 			// Log error but don't fail the request
-			// In production, we'd want proper logging here
 		}
 	}
 
